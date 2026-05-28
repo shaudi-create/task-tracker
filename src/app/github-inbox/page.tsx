@@ -17,6 +17,7 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export default function GitHubInboxPage() {
+  const [repo, setRepo] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -43,6 +44,9 @@ export default function GitHubInboxPage() {
   }
 
   useEffect(() => {
+    void fetchJson<{ github_repo: string | null }>("/api/env/public")
+      .then((data) => setRepo(data.github_repo))
+      .catch(() => {});
     void load();
   }, []);
 
@@ -65,14 +69,16 @@ export default function GitHubInboxPage() {
 
   const emptyCopy = useMemo(
     () =>
-      "Inbox is clear. Click Sync now to pull open issues from your configured repo.",
-    [],
+      `Inbox is clear. Click Sync now to pull open issues from ${
+        repo ?? "your configured repo"
+      }.`,
+    [repo],
   );
 
   return (
     <div className="px-6 py-4">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-lg font-semibold text-zinc-900">GitHub Inbox</h1>
+        <h1 className="text-lg font-semibold text-zinc-900">GitHub Issues</h1>
         <button
           type="button"
           onClick={() => void syncNow()}

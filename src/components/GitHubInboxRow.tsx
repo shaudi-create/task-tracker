@@ -1,8 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { StatusDot } from "@/components/StatusDot";
 import type { Task } from "@/lib/schemas/task";
 import { bucketForMinutes } from "@/lib/schemas/ghBucket";
+import { TaskStatus } from "@/lib/schemas/task";
+import type { z } from "zod";
+
+type TaskStatusValue = z.infer<typeof TaskStatus>;
 
 const BUCKET_BADGE: Record<
   ReturnType<typeof bucketForMinutes>,
@@ -21,12 +26,12 @@ type GitHubInboxRowProps = {
 };
 
 export function GitHubInboxRow({ task, onRemove }: GitHubInboxRowProps) {
-  const [busy, setBusy] = useState<"accept" | "dismiss" | null>(null);
+  const [busy, setBusy] = useState(false);
   const bucket = bucketForMinutes(task.estimate_minutes);
   const badge = BUCKET_BADGE[bucket];
 
-  async function patchStatus(status: "Backlog" | "Dropped") {
-    setBusy(status === "Backlog" ? "accept" : "dismiss");
+  async function patchStatus(status: TaskStatusValue) {
+    setBusy(true);
     try {
       const res = await fetch(`/api/tasks/${task.id}`, {
         method: "PATCH",
@@ -36,9 +41,11 @@ export function GitHubInboxRow({ task, onRemove }: GitHubInboxRowProps) {
       if (!res.ok) {
         throw new Error("Failed to update task");
       }
-      onRemove?.(task.id);
+      if (status !== "Inbox") {
+        onRemove?.(task.id);
+      }
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   }
 
@@ -68,27 +75,12 @@ export function GitHubInboxRow({ task, onRemove }: GitHubInboxRowProps) {
         )}
       </div>
 
-      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-        <button
-          type="button"
-          onClick={() => void patchStatus("Backlog")}
-          disabled={busy !== null}
-          className="rounded px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 disabled:opacity-50"
-          aria-label="Accept into backlog"
-          title="Accept"
-        >
-          ✓
-        </button>
-        <button
-          type="button"
-          onClick={() => void patchStatus("Dropped")}
-          disabled={busy !== null}
-          className="rounded px-2 py-1 text-sm text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 disabled:opacity-50"
-          aria-label="Dismiss"
-          title="Dismiss"
-        >
-          ✕
-        </button>
+      <div className="shrink-0">
+        <StatusDot
+          status={task.status}
+          onStatusChange={(s) => void patchStatus(s)}
+          disabled={busy}
+        />
       </div>
     </div>
   );

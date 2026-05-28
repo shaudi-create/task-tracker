@@ -10,7 +10,7 @@ import type { Project } from "@/lib/schemas/project";
 const navItems = [
   { href: "/tasks", label: "Tasks" },
   { href: "/week", label: "Week" },
-  { href: "/github-inbox", label: "GitHub Inbox" },
+  { href: "/github-inbox", label: "GitHub Issues" },
   { href: "/settings", label: "Work Limits" },
 ] as const;
 

@@ -26,6 +26,14 @@ export async function POST() {
 
     const issues = await listOpenRepoIssues({ repo, perPage: 100 });
 
+    const now = Date.now();
+    const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
+    const fromLastWeek = issues.filter((i) => {
+      const created = new Date(i.created_at).getTime();
+      return Number.isFinite(created) && created >= weekAgo;
+    });
+    const selected = fromLastWeek.length >= 10 ? fromLastWeek : issues.slice(0, 10);
+
     let created = 0;
     let skipped = 0;
     let failed = 0;
@@ -33,7 +41,7 @@ export async function POST() {
     const client = getAnthropicClient();
     const system = buildGhBucketSystemPrompt();
 
-    for (const issue of issues) {
+    for (const issue of selected) {
       try {
         const exists = await taskExistsByGithubIssueId(issue.id);
         if (exists) {
@@ -50,8 +58,8 @@ export async function POST() {
 
         const bodyExcerpt = (issue.body ?? "").slice(0, 500);
 
-        let bucket: { bucket: "XS" | "S" | "M" | "L" | "XL"; minutes: number; rationale: string } =
-          { bucket: "M", minutes: 60, rationale: "Auto-estimated; LLM response invalid." };
+        let bucketMinutes = 60;
+        let bucketRationale: string | null = null;
         try {
           const response = await client.messages.create({
             model: getAnthropicModel(),
@@ -75,23 +83,14 @@ export async function POST() {
             throw new Error("No text in model response");
           }
 
-          const json = extractJsonFromText(block.text);
+          const json = extractJsonFromText(block.text.trim());
           const parsed = GhBucketLlmResponse.safeParse(json);
           if (parsed.success) {
-            bucket = parsed.data;
-          } else {
-            bucket = {
-              bucket: "M",
-              minutes: 60,
-              rationale: "Auto-estimated; LLM response invalid.",
-            };
+            bucketMinutes = parsed.data.minutes;
+            bucketRationale = parsed.data.rationale;
           }
         } catch {
-          bucket = {
-            bucket: "M",
-            minutes: 60,
-            rationale: "Auto-estimated; LLM response invalid.",
-          };
+          // Keep default minutes=60 and rationale=null
         }
 
         const description = truncateDescription(issue.body ?? null).value;
@@ -101,8 +100,8 @@ export async function POST() {
           description,
           status: "Inbox",
           source: "github",
-          estimate_minutes: bucket.minutes,
-          estimate_rationale: bucket.rationale,
+          estimate_minutes: bucketMinutes,
+          estimate_rationale: bucketRationale,
           github_issue_id: issue.id,
           github_issue_url: issue.html_url,
           tags: [],

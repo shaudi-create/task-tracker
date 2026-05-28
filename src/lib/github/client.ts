@@ -3,6 +3,7 @@ type GitHubIssue = {
   html_url: string;
   title: string;
   body: string | null;
+  created_at: string;
   labels: Array<{ name?: string } | string>;
   comments: number;
   pull_request?: unknown; // present for PRs in issues endpoint
@@ -30,7 +31,7 @@ export async function listOpenRepoIssues(params?: {
   const repo = params?.repo ?? requireEnv("GITHUB_REPO");
   const perPage = Math.min(Math.max(params?.perPage ?? 100, 1), 100);
 
-  const url = `https://api.github.com/repos/${repo}/issues?state=open&per_page=${perPage}`;
+  const url = `https://api.github.com/repos/${repo}/issues?state=open&sort=created&direction=desc&per_page=${perPage}`;
   const res = await fetch(url, {
     headers: githubHeaders(),
     cache: "no-store",

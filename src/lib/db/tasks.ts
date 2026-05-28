@@ -44,6 +44,8 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskType[]> {
 
   let rows;
 
+  const excludeGithubInbox = source === null;
+
   if (filters.filter === "today") {
     const anchor = filters.date
       ? parseLocalDateString(filters.date)
@@ -62,6 +64,7 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskType[]> {
         )
       )
       AND status NOT IN ('Done', 'Dropped')
+      AND (${excludeGithubInbox}::boolean IS FALSE OR NOT (source = 'github' AND status = 'Inbox'))
       AND (${source}::text IS NULL OR source = ${source})
       AND (${status}::text IS NULL OR status = ${status})
       AND (${projectId}::text IS NULL OR project_id = ${projectId}::uuid)
@@ -82,6 +85,7 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskType[]> {
         )
         OR status = 'In Progress'
       )
+      AND (${excludeGithubInbox}::boolean IS FALSE OR NOT (source = 'github' AND status = 'Inbox'))
       AND (${source}::text IS NULL OR source = ${source})
       ORDER BY scheduled_at ASC NULLS LAST, created_at ASC
     `;
@@ -103,6 +107,7 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskType[]> {
           AND (due_at AT TIME ZONE ${DEFAULT_TIMEZONE})::date BETWEEN ${anchor}::date AND ${weekEnd}::date
         )
       )
+      AND (${excludeGithubInbox}::boolean IS FALSE OR NOT (source = 'github' AND status = 'Inbox'))
       AND (${source}::text IS NULL OR source = ${source})
       AND (${status}::text IS NULL OR status = ${status})
       AND (${projectId}::text IS NULL OR project_id = ${projectId}::uuid)
@@ -114,6 +119,7 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskType[]> {
       SELECT * FROM tasks
       WHERE (${status}::text IS NULL OR status = ${status})
         AND (${source}::text IS NULL OR source = ${source})
+        AND (${excludeGithubInbox}::boolean IS FALSE OR NOT (source = 'github' AND status = 'Inbox'))
         AND (${projectId}::text IS NULL OR project_id = ${projectId}::uuid)
         AND (${tag}::text IS NULL OR ${tag} = ANY(tags))
       ORDER BY created_at ASC
