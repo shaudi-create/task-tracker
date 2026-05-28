@@ -5,10 +5,8 @@ import { FilterChip } from "@/components/FilterChip";
 import { SubtaskList } from "@/components/SubtaskList";
 import {
   formatDueChipLabel,
-  formatEstimateMinutes,
   formatSchedChipLabel,
 } from "@/lib/format";
-import { parseDurationMinutes } from "@/lib/utils/duration";
 import type { ParseApiResponse } from "@/lib/schemas/parse";
 import type { Project } from "@/lib/schemas/project";
 import {
@@ -338,12 +336,13 @@ export function ConfirmTaskModal({
             >
               <FilterChip
                 label="Estimate"
-                placeholder={estimating ? "Estimating…" : "Estimate…"}
+                placeholder={estimating ? "Estimating…" : "Est. minutes…"}
+                editPlaceholder="Enter minutes (e.g., 90)"
                 editable={!estimating}
                 kind="text"
                 value={
                   draft.estimate_minutes != null
-                    ? `Est ${formatEstimateMinutes(draft.estimate_minutes)}`
+                    ? `Est. ${draft.estimate_minutes}m`
                     : null
                 }
                 onChange={(v) => {
@@ -352,9 +351,9 @@ export function ConfirmTaskModal({
                       return { ...d, estimate_minutes: null, estimate_rationale: null };
                     }
 
-                    const parsed = parseDurationMinutes(v);
-                    if (parsed == null) {
-                      // Keep prior value if parsing fails.
+                    const parsed = Number.parseInt(v.replace(/[^\d]/g, ""), 10);
+                    if (!Number.isFinite(parsed)) {
+                      // Keep prior value if parsing fails or non-numeric.
                       return d;
                     }
 

@@ -24,6 +24,7 @@ export type FilterChipProps = {
   label: string;
   prefix?: React.ReactNode;
   placeholder?: string;
+  editPlaceholder?: string;
   tone?: FilterChipTone;
   size?: FilterChipSize;
   active?: boolean;
@@ -110,6 +111,7 @@ export function FilterChip({
   label,
   prefix,
   placeholder,
+  editPlaceholder,
   tone = "neutral",
   size = "sm",
   active = false,
@@ -260,6 +262,7 @@ export function FilterChip({
         ref={inputRef as React.RefObject<HTMLInputElement>}
         type={inputType}
         className={`${shellClass} min-w-[120px] bg-white text-zinc-900 outline-none ring-1 ring-[#5E6AD2]`}
+        placeholder={editPlaceholder}
         defaultValue={value ?? ""}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
