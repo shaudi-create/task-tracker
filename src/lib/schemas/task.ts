@@ -106,7 +106,8 @@ export const CreateTaskBody = z
   })
   .strict();
 
-export const UpdateTaskBody = z.object(writableTaskFields).strict();
+/** PATCH accepts any subset of writable fields (Zod 4 requires `.partial()`). */
+export const UpdateTaskBody = z.object(writableTaskFields).partial().strict();
 
 export const CompleteTaskBody = z.object({
   actual_minutes: ActualMinutes,

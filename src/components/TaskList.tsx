@@ -66,7 +66,12 @@ export function TaskList({ filter }: TaskListProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)));
+      setTasks((prev) => {
+        if (filter !== "All" && updated.status !== filter) {
+          return prev.filter((t) => t.id !== id);
+        }
+        return prev.map((t) => (t.id === id ? updated : t));
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update task");
     } finally {
