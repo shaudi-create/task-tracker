@@ -264,14 +264,16 @@ export async function completeTask(
     what_worked: body.what_worked?.trim() || null,
     what_blocked: body.what_blocked?.trim() || null,
   };
+  const terminalState = body.terminal_state;
+  const actualMinutes = body.actual_minutes ?? null;
 
   const rows = await sql`
     UPDATE tasks
     SET
-      status = 'Done',
-      actual_minutes = ${body.actual_minutes},
+      status = ${terminalState},
+      actual_minutes = ${actualMinutes},
       completion_log = ${JSON.stringify(completionLog)}::jsonb,
-      completed_at = now(),
+      completed_at = ${terminalState === "Done" ? sql`now()` : null},
       updated_at = now()
     WHERE id = ${id}::uuid
     RETURNING *

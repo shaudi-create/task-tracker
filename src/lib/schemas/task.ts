@@ -109,11 +109,24 @@ export const CreateTaskBody = z
 /** PATCH accepts any subset of writable fields (Zod 4 requires `.partial()`). */
 export const UpdateTaskBody = z.object(writableTaskFields).partial().strict();
 
-export const CompleteTaskBody = z.object({
-  actual_minutes: ActualMinutes,
-  what_worked: z.string().optional(),
-  what_blocked: z.string().optional(),
-});
+export const TerminalState = z.enum(["Done", "Dropped"]);
+
+export const CompleteTaskBody = z
+  .object({
+    terminal_state: TerminalState.default("Done"),
+    actual_minutes: ActualMinutes.nullish(),
+    what_worked: z.string().optional(),
+    what_blocked: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.terminal_state === "Done" && data.actual_minutes == null) {
+      ctx.addIssue({
+        code: "custom",
+        message: "actual_minutes is required when marking Done",
+        path: ["actual_minutes"],
+      });
+    }
+  });
 
 export function truncateDescription(value: string | null | undefined): {
   value: string | null;

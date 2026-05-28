@@ -4,10 +4,12 @@ import { useEffect, useState } from "react";
 import {
   CompletionLogModal,
   type CompletionPayload,
+  type TerminalStateValue,
 } from "@/components/CompletionLogModal";
 import { TaskRow } from "@/components/TaskRow";
 import type { TaskFilter } from "@/components/TaskFilterBar";
 import type { Project } from "@/lib/schemas/project";
+import { PROJECTS_UPDATED } from "@/lib/events";
 import { TaskStatus, type Task } from "@/lib/schemas/task";
 import type { z } from "zod";
 
@@ -23,22 +25,37 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-function tasksUrl(filter: TaskFilter): string {
-  if (filter === "All") return "/api/tasks";
-  return `/api/tasks?status=${encodeURIComponent(filter)}`;
+function tasksUrl(filter: TaskFilter, projectId: string | null): string {
+  const params = new URLSearchParams();
+  if (filter !== "All") params.set("status", filter);
+  if (projectId) params.set("project", projectId);
+  const query = params.toString();
+  return query ? `/api/tasks?${query}` : "/api/tasks";
 }
+
+type CompletionModalState = {
+  task: Task;
+  terminalState: TerminalStateValue;
+};
 
 type TaskListProps = {
   filter: TaskFilter;
+  projectId?: string | null;
+  onEditTask?: (task: Task) => void;
 };
 
-export function TaskList({ filter }: TaskListProps) {
+export function TaskList({
+  filter,
+  projectId = null,
+  onEditTask,
+}: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [completeTask, setCompleteTask] = useState<Task | null>(null);
+  const [completionModal, setCompletionModal] =
+    useState<CompletionModalState | null>(null);
   const [completing, setCompleting] = useState(false);
 
   useEffect(() => {
@@ -49,7 +66,7 @@ export function TaskList({ filter }: TaskListProps) {
       setError(null);
       try {
         const [taskRows, projectRows] = await Promise.all([
-          fetchJson<Task[]>(tasksUrl(filter)),
+          fetchJson<Task[]>(tasksUrl(filter, projectId)),
           fetchJson<Project[]>("/api/projects"),
         ]);
         if (cancelled) return;
@@ -67,7 +84,18 @@ export function TaskList({ filter }: TaskListProps) {
     return () => {
       cancelled = true;
     };
-  }, [filter]);
+  }, [filter, projectId]);
+
+  useEffect(() => {
+    function onProjectsUpdated() {
+      void fetchJson<Project[]>("/api/projects")
+        .then(setProjects)
+        .catch(() => {});
+    }
+    window.addEventListener(PROJECTS_UPDATED, onProjectsUpdated);
+    return () =>
+      window.removeEventListener(PROJECTS_UPDATED, onProjectsUpdated);
+  }, []);
 
   const projectNames = new Map(projects.map((p) => [p.id, p.name]));
 
@@ -87,27 +115,20 @@ export function TaskList({ filter }: TaskListProps) {
     }
   }
 
-  async function dropTask(id: string) {
-    setBusyId(id);
-    try {
-      const updated = await fetchJson<Task>(`/api/tasks/${id}`, {
-        method: "DELETE",
-      });
-      setTasks((prev) => prev.map((t) => (t.id === id ? updated : t)));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to drop task");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
   function handleStatusChange(task: Task, status: TaskStatusValue) {
     if (status === task.status) return;
+    if (status === "Done" || status === "Dropped") {
+      setCompletionModal({ task, terminalState: status });
+      return;
+    }
     void patchTask(task.id, { status });
   }
 
   function applyUpdatedTask(updated: Task) {
     setTasks((prev) => {
+      if (projectId && updated.project_id !== projectId) {
+        return prev.filter((t) => t.id !== updated.id);
+      }
       if (filter !== "All" && updated.status !== filter) {
         return prev.filter((t) => t.id !== updated.id);
       }
@@ -116,11 +137,11 @@ export function TaskList({ filter }: TaskListProps) {
   }
 
   async function submitCompletion(payload: CompletionPayload) {
-    if (!completeTask) return;
+    if (!completionModal) return;
     setCompleting(true);
     try {
       const updated = await fetchJson<Task>(
-        `/api/tasks/${completeTask.id}/complete`,
+        `/api/tasks/${completionModal.task.id}/complete`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -128,9 +149,20 @@ export function TaskList({ filter }: TaskListProps) {
         },
       );
       applyUpdatedTask(updated);
-      setCompleteTask(null);
+      setCompletionModal(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to complete task");
+      setError(err instanceof Error ? err.message : "Failed to save task");
+    } finally {
+      setCompleting(false);
+    }
+  }
+
+  async function skipDropLogging() {
+    if (!completionModal) return;
+    setCompleting(true);
+    try {
+      await patchTask(completionModal.task.id, { status: "Dropped" });
+      setCompletionModal(null);
     } finally {
       setCompleting(false);
     }
@@ -168,18 +200,22 @@ export function TaskList({ filter }: TaskListProps) {
             }
             busy={busyId === task.id}
             onStatusChange={(status) => handleStatusChange(task, status)}
-            onDone={() => setCompleteTask(task)}
-            onPause={() => void patchTask(task.id, { status: "Paused" })}
-            onDelete={() => void dropTask(task.id)}
+            onEdit={onEditTask ? () => onEditTask(task) : undefined}
           />
         ))}
 
       <CompletionLogModal
-        open={completeTask !== null}
-        task={completeTask}
+        open={completionModal !== null}
+        task={completionModal?.task ?? null}
+        terminalState={completionModal?.terminalState ?? "Done"}
         saving={completing}
-        onClose={() => setCompleteTask(null)}
+        onClose={() => setCompletionModal(null)}
         onSubmit={submitCompletion}
+        onSkip={
+          completionModal?.terminalState === "Dropped"
+            ? skipDropLogging
+            : undefined
+        }
       />
     </>
   );

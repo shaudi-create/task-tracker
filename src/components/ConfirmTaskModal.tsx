@@ -5,7 +5,7 @@ import { FilterChip } from "@/components/FilterChip";
 import { formatEstimateMinutes } from "@/lib/format";
 import type { ParseApiResponse } from "@/lib/schemas/parse";
 import type { Project } from "@/lib/schemas/project";
-import { LocationTag, Priority } from "@/lib/schemas/task";
+import { LocationTag, Priority, type Task } from "@/lib/schemas/task";
 
 const LOCATION_OPTIONS = LocationTag.options.map((value) => ({
   value,
@@ -36,10 +36,25 @@ type ConfirmTaskModalProps = {
   open: boolean;
   initial: TaskDraft;
   projects: Project[];
+  mode?: "create" | "edit";
   saving?: boolean;
   onClose: () => void;
   onSave: (draft: TaskDraft) => void | Promise<void>;
 };
+
+export function taskToDraft(task: Task): TaskDraft {
+  return {
+    title: task.title,
+    due_at: task.due_at,
+    scheduled_at: task.scheduled_at,
+    location_tag: task.location_tag,
+    priority: task.priority,
+    estimate_minutes: task.estimate_minutes,
+    estimate_rationale: task.estimate_rationale,
+    project_id: task.project_id,
+    tags: task.tags ?? [],
+  };
+}
 
 function draftFromParse(
   data: ParseApiResponse,
@@ -76,6 +91,7 @@ export function ConfirmTaskModal({
   open,
   initial,
   projects,
+  mode = "create",
   saving = false,
   onClose,
   onSave,
@@ -167,7 +183,7 @@ export function ConfirmTaskModal({
   if (!open) return null;
 
   const projectOptions = [
-    { value: "", label: "No project" },
+    { value: "", label: "(none)" },
     ...projects.map((p) => ({ value: p.id, label: p.name })),
   ];
 
@@ -180,6 +196,14 @@ export function ConfirmTaskModal({
       aria-labelledby="confirm-task-title"
     >
       <div className="w-full max-w-[480px] rounded-lg bg-white p-4 shadow-lg">
+        {mode === "edit" && (
+          <p
+            id="confirm-task-title"
+            className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-500"
+          >
+            Edit task
+          </p>
+        )}
         <div className="flex items-start justify-between gap-2">
           <FilterChip
             label="Title"
@@ -203,7 +227,7 @@ export function ConfirmTaskModal({
           </button>
         </div>
 
-        {(draft.partial || draft.parseUnavailable) && (
+        {mode === "create" && (draft.partial || draft.parseUnavailable) && (
           <p
             className={`mt-3 text-xs ${
               draft.parseUnavailable
@@ -295,7 +319,8 @@ export function ConfirmTaskModal({
             editable
             kind="select"
             options={projectOptions}
-            value={draft.project_id ?? ""}
+            value={draft.project_id}
+            active={draft.project_id != null}
             onChange={(v) =>
               setDraft((d) => ({ ...d, project_id: v || null }))
             }
@@ -328,7 +353,7 @@ export function ConfirmTaskModal({
             onClick={() => void handleSave()}
             className="rounded bg-[#5E6AD2] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#4e5ac2] disabled:opacity-50"
           >
-            {saving ? "Adding…" : "Add task"}
+            {saving ? "Saving…" : mode === "edit" ? "Save" : "Add task"}
           </button>
         </div>
         <p className="mt-2 text-right text-[11px] text-zinc-400">⌘↵ to save</p>

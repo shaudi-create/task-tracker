@@ -3,9 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { formatEstimateMinutes } from "@/lib/format";
 import type { Task } from "@/lib/schemas/task";
+import type { z } from "zod";
+import { TerminalState } from "@/lib/schemas/task";
+
+export type TerminalStateValue = z.infer<typeof TerminalState>;
 
 export type CompletionPayload = {
-  actual_minutes: number;
+  terminal_state: TerminalStateValue;
+  actual_minutes?: number | null;
   what_worked?: string;
   what_blocked?: string;
 };
@@ -13,18 +18,23 @@ export type CompletionPayload = {
 type CompletionLogModalProps = {
   open: boolean;
   task: Task | null;
+  terminalState: TerminalStateValue;
   saving?: boolean;
   onClose: () => void;
   onSubmit: (payload: CompletionPayload) => void | Promise<void>;
+  onSkip?: () => void | Promise<void>;
 };
 
 export function CompletionLogModal({
   open,
   task,
+  terminalState,
   saving = false,
   onClose,
   onSubmit,
+  onSkip,
 }: CompletionLogModalProps) {
+  const isDone = terminalState === "Done";
   const [actualMinutes, setActualMinutes] = useState("");
   const [whatWorked, setWhatWorked] = useState("");
   const [whatBlocked, setWhatBlocked] = useState("");
@@ -38,31 +48,56 @@ export function CompletionLogModal({
     setWhatWorked("");
     setWhatBlocked("");
     setError(null);
-  }, [open, task]);
+  }, [open, task, terminalState]);
 
   const handleSubmit = useCallback(() => {
     const raw = actualMinutes.trim();
-    if (!raw) {
-      setError("Enter how long it took");
+    if (isDone) {
+      if (!raw) {
+        setError("Enter how long it took");
+        return;
+      }
+      const n = Number.parseInt(raw, 10);
+      if (Number.isNaN(n) || n < 0) {
+        setError("Enter how long it took");
+        return;
+      }
+      if (n % 5 !== 0) {
+        setError("Use 5-minute increments");
+        return;
+      }
+      setError(null);
+      void onSubmit({
+        terminal_state: "Done",
+        actual_minutes: n,
+        what_worked: whatWorked.trim() || undefined,
+        what_blocked: whatBlocked.trim() || undefined,
+      });
       return;
     }
-    const n = Number.parseInt(raw, 10);
-    if (Number.isNaN(n) || n < 0) {
-      setError("Enter how long it took");
-      return;
-    }
-    if (n % 5 !== 0) {
-      setError("Use 5-minute increments");
-      return;
+
+    let actual: number | null = null;
+    if (raw) {
+      const n = Number.parseInt(raw, 10);
+      if (Number.isNaN(n) || n < 0) {
+        setError("Enter a valid number of minutes");
+        return;
+      }
+      if (n % 5 !== 0) {
+        setError("Use 5-minute increments");
+        return;
+      }
+      actual = n;
     }
 
     setError(null);
     void onSubmit({
-      actual_minutes: n,
+      terminal_state: "Dropped",
+      actual_minutes: actual,
       what_worked: whatWorked.trim() || undefined,
       what_blocked: whatBlocked.trim() || undefined,
     });
-  }, [actualMinutes, whatWorked, whatBlocked, onSubmit]);
+  }, [actualMinutes, whatWorked, whatBlocked, onSubmit, isDone]);
 
   useEffect(() => {
     if (!open) return;
@@ -89,6 +124,13 @@ export function CompletionLogModal({
       ? `Estimated ${formatEstimateMinutes(task.estimate_minutes)}`
       : null;
 
+  const title = isDone ? "Log time spent" : "Log dropped task";
+  const submitLabel = isDone ? "Log & Mark Done" : "Log & Drop";
+  const minutesLabel = isDone
+    ? "How long did it take? (minutes)"
+    : "How long did it take? (optional, minutes)";
+  const notesLabel = isDone ? "What worked? (optional)" : "Notes (optional)";
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -104,7 +146,7 @@ export function CompletionLogModal({
               id="completion-log-title"
               className="text-lg font-semibold text-zinc-900"
             >
-              Log & mark done
+              {title}
             </h2>
             <p className="mt-0.5 truncate text-sm text-zinc-500">{task.title}</p>
             {estimateHint && (
@@ -124,7 +166,7 @@ export function CompletionLogModal({
         <div className="mt-4 flex flex-col gap-3">
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-zinc-600">
-              How long did it take? (minutes)
+              {minutesLabel}
             </span>
             <input
               type="number"
@@ -147,7 +189,7 @@ export function CompletionLogModal({
 
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-zinc-600">
-              What worked? (optional)
+              {notesLabel}
             </span>
             <textarea
               value={whatWorked}
@@ -170,21 +212,33 @@ export function CompletionLogModal({
           </label>
         </div>
 
-        <div className="mt-6 flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50"
-          >
-            Cancel
-          </button>
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50"
+            >
+              Cancel
+            </button>
+            {!isDone && onSkip && (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => void onSkip()}
+                className="text-sm text-zinc-500 underline hover:text-zinc-800 disabled:opacity-50"
+              >
+                Skip logging
+              </button>
+            )}
+          </div>
           <button
             type="button"
             disabled={saving}
             onClick={() => handleSubmit()}
             className="rounded bg-[#5E6AD2] px-3 py-1.5 text-sm font-medium text-white hover:bg-[#4e5ac2] disabled:opacity-50"
           >
-            {saving ? "Saving…" : "Log & Mark Done"}
+            {saving ? "Saving…" : submitLabel}
           </button>
         </div>
         <p className="mt-2 text-right text-[11px] text-zinc-400">⌘↵ to save</p>

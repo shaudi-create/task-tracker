@@ -72,6 +72,7 @@ export async function parseNaturalLanguageTask(
   if (parsed.project_name) {
     const project = await findProjectByName(parsed.project_name);
     parsed.project_id = project?.id ?? null;
+    delete parsed.project_name;
   }
 
   return parsed;
