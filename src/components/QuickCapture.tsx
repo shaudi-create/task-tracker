@@ -64,7 +64,7 @@ export function QuickCapture({ onParsed, disabled = false }: QuickCaptureProps) 
         value={value}
         disabled={disabled || pending}
         placeholder="Add a task… ⌘K"
-        className="w-full rounded border border-zinc-200 px-3 py-1.5 pr-8 text-sm disabled:bg-zinc-50"
+        className="w-full rounded border border-zinc-300 px-3 py-3 pr-8 text-base disabled:bg-zinc-50"
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Escape") {

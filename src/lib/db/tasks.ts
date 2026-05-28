@@ -58,6 +58,7 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskType[]> {
           AND (due_at AT TIME ZONE ${DEFAULT_TIMEZONE})::date = ${anchor}::date
         )
       )
+      AND status NOT IN ('Done', 'Dropped')
       AND (${status}::text IS NULL OR status = ${status})
       AND (${projectId}::text IS NULL OR project_id = ${projectId}::uuid)
       AND (${tag}::text IS NULL OR ${tag} = ANY(tags))

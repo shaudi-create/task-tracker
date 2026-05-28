@@ -187,10 +187,13 @@ export function Sidebar() {
           );
         })}
         <span
-          className="cursor-not-allowed rounded px-2 py-1.5 text-sm text-zinc-400"
+          className="flex items-center justify-between rounded px-2 py-1.5 text-sm text-zinc-600"
           title="Deferred to v2"
         >
-          GitHub Inbox
+          <span>GitHub Inbox</span>
+          <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-600">
+            v2
+          </span>
         </span>
       </nav>
 

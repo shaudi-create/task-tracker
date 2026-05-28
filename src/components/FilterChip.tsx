@@ -14,7 +14,7 @@ const toneClasses: Record<FilterChipTone, string> = {
 };
 
 const sizeClasses: Record<FilterChipSize, string> = {
-  sm: "px-2 py-0.5 text-xs",
+  sm: "px-3 py-1.5 text-sm",
   md: "px-3 py-1.5 text-base",
 };
 
@@ -22,6 +22,7 @@ export type FilterChipSelectOption = { value: string; label: string };
 
 export type FilterChipProps = {
   label: string;
+  prefix?: React.ReactNode;
   placeholder?: string;
   tone?: FilterChipTone;
   size?: FilterChipSize;
@@ -107,6 +108,7 @@ function defaultDisplayValue(
 
 export function FilterChip({
   label,
+  prefix,
   placeholder,
   tone = "neutral",
   size = "sm",
@@ -165,11 +167,17 @@ export function FilterChip({
     if (onClick) {
       return (
         <button type="button" onClick={onClick} className={shellClass}>
+          {prefix}
           {label}
         </button>
       );
     }
-    return <span className={shellClass}>{label}</span>;
+    return (
+      <span className={shellClass}>
+        {prefix}
+        {label}
+      </span>
+    );
   }
 
   if (editing) {
