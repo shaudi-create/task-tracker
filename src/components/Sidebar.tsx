@@ -8,7 +8,7 @@ import { notifyProjectsUpdated } from "@/lib/events";
 import type { Project } from "@/lib/schemas/project";
 
 const navItems = [
-  { href: "/tasks", label: "Tasks", showInboxBadge: true },
+  { href: "/tasks", label: "Tasks" },
   { href: "/week", label: "Week" },
   { href: "/settings", label: "Settings" },
 ] as const;
@@ -33,7 +33,6 @@ export function Sidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeProjectId = searchParams.get("project");
-  const [inboxCount, setInboxCount] = useState(0);
   const [projects, setProjects] = useState<Project[]>([]);
   const [creatingProject, setCreatingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
@@ -50,14 +49,7 @@ export function Sidebar() {
   useEffect(() => {
     async function load() {
       try {
-        const [tasksRes, projectsRes] = await Promise.all([
-          fetch("/api/tasks?status=Inbox"),
-          fetch("/api/projects"),
-        ]);
-        if (tasksRes.ok) {
-          const tasks = (await tasksRes.json()) as unknown[];
-          setInboxCount(tasks.length);
-        }
+        const projectsRes = await fetch("/api/projects");
         if (projectsRes.ok) {
           setProjects((await projectsRes.json()) as Project[]);
         }
@@ -191,13 +183,6 @@ export function Sidebar() {
               }`}
             >
               <span>{item.label}</span>
-              {"showInboxBadge" in item &&
-                item.showInboxBadge &&
-                inboxCount > 0 && (
-                  <span className="ml-2 min-w-[1.25rem] rounded-full bg-zinc-200 px-1.5 py-0.5 text-center text-[11px] font-medium text-zinc-700">
-                    {inboxCount}
-                  </span>
-                )}
             </Link>
           );
         })}
@@ -243,9 +228,11 @@ export function Sidebar() {
                   }}
                   className="min-w-0 flex-1 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-sm text-zinc-900 outline-none ring-1 ring-[#5E6AD2]"
                 />
-                <span className="shrink-0 text-xs text-zinc-400">
-                  {project.active_task_count ?? 0}
-                </span>
+                {(project.active_task_count ?? 0) > 0 && (
+                  <span className="shrink-0 text-xs font-medium text-zinc-700">
+                    {project.active_task_count}
+                  </span>
+                )}
               </div>
             );
           }
@@ -266,9 +253,11 @@ export function Sidebar() {
               >
                 {project.name}
               </Link>
-              <span className="shrink-0 text-xs text-zinc-400">
-                {project.active_task_count ?? 0}
-              </span>
+              {(project.active_task_count ?? 0) > 0 && (
+                <span className="shrink-0 text-xs font-medium text-zinc-700">
+                  {project.active_task_count}
+                </span>
+              )}
               <button
                 type="button"
                 onClick={(e) => startRename(project, e)}

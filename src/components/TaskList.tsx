@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CompletionLogModal,
   type CompletionPayload,
@@ -99,6 +99,13 @@ export function TaskList({
 
   const projectNames = new Map(projects.map((p) => [p.id, p.name]));
 
+  const sortedTasks = useMemo(() => {
+    if (filter !== "All") return tasks;
+    const active = tasks.filter((t) => t.status !== "Dropped");
+    const dropped = tasks.filter((t) => t.status === "Dropped");
+    return [...active, ...dropped];
+  }, [tasks, filter]);
+
   async function patchTask(id: string, body: Record<string, unknown>) {
     setBusyId(id);
     try {
@@ -193,7 +200,7 @@ export function TaskList({
       )}
 
       {!loading &&
-        tasks.map((task) => (
+        sortedTasks.map((task) => (
           <TaskRow
             key={task.id}
             task={task}

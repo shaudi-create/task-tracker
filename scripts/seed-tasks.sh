@@ -11,7 +11,8 @@ post() {
 }
 
 echo "Seeding tasks at $BASE ..."
-post '{"title":"Review PR","status":"Inbox","priority":"High","location_tag":"office","estimate_minutes":30}'
+post '{"title":"Review PR — ollama main","status":"Inbox","priority":"High","location_tag":"office","estimate_minutes":30}'
+post '{"title":"Review PR — security patch","status":"Scheduled","priority":"High","location_tag":"office","estimate_minutes":45,"scheduled_at":"2026-05-28T16:00:00.000Z"}'
 post '{"title":"Write weekly update","status":"Backlog","priority":"Medium","location_tag":"home","estimate_minutes":45}'
 post '{"title":"Deploy hotfix","status":"Scheduled","priority":"Urgent","location_tag":"home","estimate_minutes":60,"scheduled_at":"2026-05-28T14:00:00.000Z"}'
 post '{"title":"Morning standup prep","status":"In Progress","priority":"Medium","location_tag":"office","estimate_minutes":15}'

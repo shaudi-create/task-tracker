@@ -6,10 +6,11 @@ type FilterChipTone = "neutral" | "accent" | "amber" | "muted";
 type FilterChipSize = "sm" | "md";
 
 const toneClasses: Record<FilterChipTone, string> = {
-  neutral: "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50",
-  accent: "border-[#5E6AD2] bg-[#5E6AD2] text-white",
+  neutral:
+    "border-transparent bg-zinc-100 text-zinc-600 hover:bg-zinc-200/70",
+  accent: "border-transparent bg-[#5E6AD2] text-white",
   amber: "border-amber-400 bg-amber-50 text-amber-900",
-  muted: "border-zinc-100 bg-zinc-50 text-zinc-500",
+  muted: "border-transparent bg-zinc-50 text-zinc-500",
 };
 
 const sizeClasses: Record<FilterChipSize, string> = {
@@ -128,7 +129,8 @@ export function FilterChip({
     ? (formatValue?.(value!) ??
       defaultDisplayValue(value!, kind, options))
     : (placeholder ?? label);
-  const chipTone = hasValue ? resolvedTone : emptyTone;
+  const chipTone =
+    active && !editable ? "accent" : hasValue ? resolvedTone : emptyTone;
   const isPickerKind = kind === "date" || kind === "datetime";
 
   useEffect(() => {

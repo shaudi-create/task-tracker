@@ -3,13 +3,17 @@
 import { StatusDot } from "@/components/StatusDot";
 import { WeatherWarning } from "@/components/WeatherWarning";
 import { formatDueAt, formatEstimateMinutes } from "@/lib/format";
+import { STATUS_TEXT } from "@/lib/statusColors";
+import { projectDotColorClass } from "@/lib/utils/projectColor";
 import { TaskStatus, type Task } from "@/lib/schemas/task";
 import type { z } from "zod";
 
 type TaskStatusValue = z.infer<typeof TaskStatus>;
 
 const metadataClass =
-  "hidden text-[12px] text-zinc-400 sm:inline";
+  "hidden text-[12px] sm:inline";
+
+const grayMeta = "text-zinc-400";
 
 type TaskRowProps = {
   task: Task;
@@ -18,6 +22,47 @@ type TaskRowProps = {
   onEdit?: () => void;
   busy?: boolean;
 };
+
+function PriorityMarker({ priority }: { priority: Task["priority"] }) {
+  if (priority === "Urgent") {
+    return (
+      <span className="w-3 shrink-0 text-center text-xs leading-none text-red-500">
+        ↑↑
+      </span>
+    );
+  }
+  if (priority === "High") {
+    return (
+      <span className="w-3 shrink-0 text-center text-xs leading-none text-amber-500">
+        ↑
+      </span>
+    );
+  }
+  return null;
+}
+
+function buildRestMetadata(
+  task: Task,
+): string[] {
+  const isDone = task.status === "Done";
+  const isDropped = task.status === "Dropped";
+
+  if ((isDone || isDropped) && task.actual_minutes != null) {
+    if (task.estimate_minutes != null) {
+      return [
+        `${formatEstimateMinutes(task.estimate_minutes)} → ${formatEstimateMinutes(task.actual_minutes)}`,
+      ];
+    }
+    return [`→ ${formatEstimateMinutes(task.actual_minutes)}`];
+  }
+
+  const parts: string[] = [];
+  if (task.due_at) parts.push(formatDueAt(task.due_at));
+  if (task.estimate_minutes != null) {
+    parts.push(formatEstimateMinutes(task.estimate_minutes));
+  }
+  return parts;
+}
 
 export function TaskRow({
   task,
@@ -29,25 +74,11 @@ export function TaskRow({
   const isDone = task.status === "Done";
   const isDropped = task.status === "Dropped";
   const showWeather = false; // v1: weather deferred (step 12)
-
-  const metadata: string[] = [task.status];
-  if ((isDone || isDropped) && task.actual_minutes != null) {
-    if (task.estimate_minutes != null) {
-      metadata.push(
-        `estimated ${formatEstimateMinutes(task.estimate_minutes)}, took ${formatEstimateMinutes(task.actual_minutes)}`,
-      );
-    } else {
-      metadata.push(`took ${formatEstimateMinutes(task.actual_minutes)}`);
-    }
-  } else {
-    if (task.due_at) metadata.push(formatDueAt(task.due_at));
-    if (task.estimate_minutes != null) {
-      metadata.push(formatEstimateMinutes(task.estimate_minutes));
-    }
-  }
+  const restMeta = buildRestMetadata(task);
 
   return (
     <div className="group flex h-10 items-center gap-2 border-b border-zinc-100 px-3 text-sm">
+      <PriorityMarker priority={task.priority} />
       <StatusDot
         status={task.status}
         onStatusChange={onStatusChange}
@@ -79,16 +110,29 @@ export function TaskRow({
 
       <div className="flex shrink-0 items-center gap-2">
         {showWeather ? <WeatherWarning /> : null}
-        {metadata.length > 0 && (
-          <span
-            className={`${metadataClass} ${isDropped ? "line-through" : ""}`}
-          >
-            {metadata.join(" · ")}
-          </span>
-        )}
-        {projectName && (
-          <span className={metadataClass}>{projectName}</span>
-        )}
+        <span
+          className={`${metadataClass} ${isDropped ? "line-through" : ""}`}
+        >
+            <span className={`${STATUS_TEXT[task.status]} opacity-70`}>
+              {task.status}
+            </span>
+            {restMeta.map((part) => (
+              <span key={part} className={grayMeta}>
+                {" · "}
+                {part}
+              </span>
+            ))}
+            {projectName && (
+              <span className={`${grayMeta} inline-flex items-center gap-1`}>
+                {" · "}
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${projectDotColorClass(projectName)}`}
+                  aria-hidden
+                />
+                {projectName}
+              </span>
+            )}
+        </span>
       </div>
     </div>
   );
