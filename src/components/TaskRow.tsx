@@ -61,7 +61,7 @@ export function TaskRow({
   const isDropped = task.status === "Dropped";
   const showWeather = false; // v1: weather deferred (step 12)
 
-  const metadata: string[] = [];
+  const metadata: string[] = [task.status];
   if (isDone && task.actual_minutes != null) {
     if (task.estimate_minutes != null) {
       metadata.push(
@@ -98,7 +98,11 @@ export function TaskRow({
       <div className="flex shrink-0 items-center gap-2">
         {showWeather ? <WeatherWarning /> : null}
         {metadata.length > 0 && (
-          <span className="hidden text-xs text-zinc-400 sm:inline">
+          <span
+            className={`hidden text-[12px] text-zinc-400 sm:inline ${
+              isDropped ? "line-through" : ""
+            }`}
+          >
             {metadata.join(" · ")}
           </span>
         )}

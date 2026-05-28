@@ -29,9 +29,9 @@ export function StatusDot({
   disabled = false,
 }: StatusDotProps) {
   return (
-    <div className="relative h-4 w-4 shrink-0">
+    <div className="relative h-5 w-5 shrink-0">
       <span
-        className={`pointer-events-none absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full ${statusColor[status]}`}
+        className={`pointer-events-none absolute left-1/2 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ${statusColor[status]}`}
         aria-hidden
       />
       <select
