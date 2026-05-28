@@ -20,6 +20,7 @@ import {
 
 export type TaskListFilters = {
   status?: string;
+  source?: "manual" | "github";
   project?: string;
   tag?: string;
   filter?: "today" | "week" | "agenda";
@@ -37,6 +38,7 @@ export async function listDistinctTags(): Promise<string[]> {
 
 export async function listTasks(filters: TaskListFilters): Promise<TaskType[]> {
   const status = filters.status || null;
+  const source = filters.source || null;
   const projectId = filters.project || null;
   const tag = filters.tag || null;
 
@@ -60,6 +62,7 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskType[]> {
         )
       )
       AND status NOT IN ('Done', 'Dropped')
+      AND (${source}::text IS NULL OR source = ${source})
       AND (${status}::text IS NULL OR status = ${status})
       AND (${projectId}::text IS NULL OR project_id = ${projectId}::uuid)
       AND (${tag}::text IS NULL OR ${tag} = ANY(tags))
@@ -79,6 +82,7 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskType[]> {
         )
         OR status = 'In Progress'
       )
+      AND (${source}::text IS NULL OR source = ${source})
       ORDER BY scheduled_at ASC NULLS LAST, created_at ASC
     `;
   } else if (filters.filter === "week") {
@@ -99,6 +103,7 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskType[]> {
           AND (due_at AT TIME ZONE ${DEFAULT_TIMEZONE})::date BETWEEN ${anchor}::date AND ${weekEnd}::date
         )
       )
+      AND (${source}::text IS NULL OR source = ${source})
       AND (${status}::text IS NULL OR status = ${status})
       AND (${projectId}::text IS NULL OR project_id = ${projectId}::uuid)
       AND (${tag}::text IS NULL OR ${tag} = ANY(tags))
@@ -108,6 +113,7 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskType[]> {
     rows = await sql`
       SELECT * FROM tasks
       WHERE (${status}::text IS NULL OR status = ${status})
+        AND (${source}::text IS NULL OR source = ${source})
         AND (${projectId}::text IS NULL OR project_id = ${projectId}::uuid)
         AND (${tag}::text IS NULL OR ${tag} = ANY(tags))
       ORDER BY created_at ASC
@@ -117,6 +123,18 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskType[]> {
   return rows.map((row) =>
     Task.parse(mapTaskRow(row as Record<string, unknown>)),
   );
+}
+
+export async function taskExistsByGithubIssueId(
+  githubIssueId: number,
+): Promise<boolean> {
+  const rows = await sql`
+    SELECT 1
+    FROM tasks
+    WHERE github_issue_id = ${githubIssueId}::bigint
+    LIMIT 1
+  `;
+  return rows.length > 0;
 }
 
 export async function getTaskById(id: string): Promise<TaskType | null> {

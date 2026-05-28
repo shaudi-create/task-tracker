@@ -4,12 +4,13 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { FilterChip } from "@/components/FilterChip";
-import { notifyProjectsUpdated } from "@/lib/events";
+import { TASKS_UPDATED, notifyProjectsUpdated } from "@/lib/events";
 import type { Project } from "@/lib/schemas/project";
 
 const navItems = [
   { href: "/tasks", label: "Tasks" },
   { href: "/week", label: "Week" },
+  { href: "/github-inbox", label: "GitHub Inbox" },
   { href: "/settings", label: "Work Limits" },
 ] as const;
 
@@ -34,6 +35,7 @@ export function Sidebar() {
   const searchParams = useSearchParams();
   const activeProjectId = searchParams.get("project");
   const [projects, setProjects] = useState<Project[]>([]);
+  const [ghInboxCount, setGhInboxCount] = useState(0);
   const [creatingProject, setCreatingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState("");
   const [projectError, setProjectError] = useState<string | null>(null);
@@ -59,6 +61,36 @@ export function Sidebar() {
     }
     void load();
   }, [pathname, activeProjectId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCount() {
+      try {
+        const res = await fetch("/api/tasks?status=Inbox&source=github", {
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as unknown;
+        if (cancelled) return;
+        if (Array.isArray(data)) {
+          setGhInboxCount(data.length);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    void loadCount();
+    function onTasksUpdated() {
+      void loadCount();
+    }
+    window.addEventListener(TASKS_UPDATED, onTasksUpdated);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(TASKS_UPDATED, onTasksUpdated);
+    };
+  }, []);
 
   useEffect(() => {
     if (creatingProject) {
@@ -183,18 +215,14 @@ export function Sidebar() {
               }`}
             >
               <span>{item.label}</span>
+              {item.href === "/github-inbox" && ghInboxCount > 0 && (
+                <span className="rounded bg-zinc-200 px-2 py-0.5 text-xs font-medium text-zinc-700">
+                  {ghInboxCount}
+                </span>
+              )}
             </Link>
           );
         })}
-        <span
-          className="flex items-center justify-between rounded px-2 py-1.5 text-sm text-zinc-600"
-          title="Deferred to v2"
-        >
-          <span>GitHub Inbox</span>
-          <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-600">
-            v2
-          </span>
-        </span>
       </nav>
 
       <div className="mt-4 flex flex-col gap-1 px-2">

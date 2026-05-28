@@ -23,6 +23,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const source = searchParams.get("source") ?? undefined;
+    if (source && source !== "manual" && source !== "github") {
+      return errorResponse("VALIDATION_ERROR", "Invalid source filter", 422);
+    }
+
     const filter = searchParams.get("filter");
     if (
       filter &&
@@ -39,6 +44,7 @@ export async function GET(request: NextRequest) {
 
     const tasks = await listTasks({
       status: status ?? undefined,
+      source: (source as "manual" | "github" | undefined) ?? undefined,
       project: searchParams.get("project") ?? undefined,
       tag: searchParams.get("tag") ?? undefined,
       filter: filter as "today" | "week" | "agenda" | undefined,
