@@ -62,9 +62,19 @@ export function TaskRow({
   const showWeather = false; // v1: weather deferred (step 12)
 
   const metadata: string[] = [];
-  if (task.due_at) metadata.push(formatDueAt(task.due_at));
-  if (task.estimate_minutes != null) {
-    metadata.push(formatEstimateMinutes(task.estimate_minutes));
+  if (isDone && task.actual_minutes != null) {
+    if (task.estimate_minutes != null) {
+      metadata.push(
+        `estimated ${formatEstimateMinutes(task.estimate_minutes)}, took ${formatEstimateMinutes(task.actual_minutes)}`,
+      );
+    } else {
+      metadata.push(`took ${formatEstimateMinutes(task.actual_minutes)}`);
+    }
+  } else {
+    if (task.due_at) metadata.push(formatDueAt(task.due_at));
+    if (task.estimate_minutes != null) {
+      metadata.push(formatEstimateMinutes(task.estimate_minutes));
+    }
   }
   if (projectName) metadata.push(projectName);
 

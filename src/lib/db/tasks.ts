@@ -3,6 +3,7 @@ import { sql } from "@/lib/db/client";
 import { mapTaskRow } from "@/lib/db/mappers";
 import {
   CreateTaskBody,
+  CompleteTaskBody,
   normalizeTags,
   Task,
   truncateDescription,
@@ -253,6 +254,31 @@ export async function updateTask(
     task: Task.parse(mapTaskRow(rows[0] as Record<string, unknown>)),
     descriptionTrimmed,
   };
+}
+
+export async function completeTask(
+  id: string,
+  body: z.infer<typeof CompleteTaskBody>,
+): Promise<TaskType | null> {
+  const completionLog = {
+    what_worked: body.what_worked?.trim() || null,
+    what_blocked: body.what_blocked?.trim() || null,
+  };
+
+  const rows = await sql`
+    UPDATE tasks
+    SET
+      status = 'Done',
+      actual_minutes = ${body.actual_minutes},
+      completion_log = ${JSON.stringify(completionLog)}::jsonb,
+      completed_at = now(),
+      updated_at = now()
+    WHERE id = ${id}::uuid
+    RETURNING *
+  `;
+
+  if (rows.length === 0) return null;
+  return Task.parse(mapTaskRow(rows[0] as Record<string, unknown>));
 }
 
 export async function softDeleteTask(id: string): Promise<TaskType | null> {

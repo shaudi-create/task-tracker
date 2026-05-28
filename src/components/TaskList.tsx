@@ -1,6 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  CompletionLogModal,
+  type CompletionPayload,
+} from "@/components/CompletionLogModal";
 import { TaskRow } from "@/components/TaskRow";
 import type { TaskFilter } from "@/components/TaskFilterBar";
 import type { Project } from "@/lib/schemas/project";
@@ -34,27 +38,36 @@ export function TaskList({ filter }: TaskListProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-
-  const load = useCallback(async (activeFilter: TaskFilter) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [taskRows, projectRows] = await Promise.all([
-        fetchJson<Task[]>(tasksUrl(activeFilter)),
-        fetchJson<Project[]>("/api/projects"),
-      ]);
-      setTasks(taskRows);
-      setProjects(projectRows);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load tasks");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [completeTask, setCompleteTask] = useState<Task | null>(null);
+  const [completing, setCompleting] = useState(false);
 
   useEffect(() => {
-    void load(filter);
-  }, [filter, load]);
+    let cancelled = false;
+
+    async function load() {
+      setLoading(true);
+      setError(null);
+      try {
+        const [taskRows, projectRows] = await Promise.all([
+          fetchJson<Task[]>(tasksUrl(filter)),
+          fetchJson<Project[]>("/api/projects"),
+        ]);
+        if (cancelled) return;
+        setTasks(taskRows);
+        setProjects(projectRows);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Failed to load tasks");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [filter]);
 
   const projectNames = new Map(projects.map((p) => [p.id, p.name]));
 
@@ -66,12 +79,7 @@ export function TaskList({ filter }: TaskListProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
-      setTasks((prev) => {
-        if (filter !== "All" && updated.status !== filter) {
-          return prev.filter((t) => t.id !== id);
-        }
-        return prev.map((t) => (t.id === id ? updated : t));
-      });
+      applyUpdatedTask(updated);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update task");
     } finally {
@@ -96,6 +104,36 @@ export function TaskList({ filter }: TaskListProps) {
   function handleStatusChange(task: Task, status: TaskStatusValue) {
     if (status === task.status) return;
     void patchTask(task.id, { status });
+  }
+
+  function applyUpdatedTask(updated: Task) {
+    setTasks((prev) => {
+      if (filter !== "All" && updated.status !== filter) {
+        return prev.filter((t) => t.id !== updated.id);
+      }
+      return prev.map((t) => (t.id === updated.id ? updated : t));
+    });
+  }
+
+  async function submitCompletion(payload: CompletionPayload) {
+    if (!completeTask) return;
+    setCompleting(true);
+    try {
+      const updated = await fetchJson<Task>(
+        `/api/tasks/${completeTask.id}/complete`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
+      applyUpdatedTask(updated);
+      setCompleteTask(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to complete task");
+    } finally {
+      setCompleting(false);
+    }
   }
 
   return (
@@ -130,11 +168,19 @@ export function TaskList({ filter }: TaskListProps) {
             }
             busy={busyId === task.id}
             onStatusChange={(status) => handleStatusChange(task, status)}
-            onDone={() => void patchTask(task.id, { status: "Done" })}
+            onDone={() => setCompleteTask(task)}
             onPause={() => void patchTask(task.id, { status: "Paused" })}
             onDelete={() => void dropTask(task.id)}
           />
         ))}
+
+      <CompletionLogModal
+        open={completeTask !== null}
+        task={completeTask}
+        saving={completing}
+        onClose={() => setCompleteTask(null)}
+        onSubmit={submitCompletion}
+      />
     </>
   );
 }
