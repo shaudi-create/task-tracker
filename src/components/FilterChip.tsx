@@ -32,6 +32,10 @@ export type FilterChipProps = {
   options?: FilterChipSelectOption[];
   onChange?: (value: string | null) => void;
   emptyTone?: FilterChipTone;
+  /** Custom label when value is set (e.g. "Due Jun 3"). */
+  formatValue?: (value: string) => string;
+  /** Focus the native control when entering edit mode (default true). */
+  focusOnEdit?: boolean;
 };
 
 function toDateInputValue(iso: string | null | undefined): string {
@@ -78,12 +82,11 @@ function datetimeLocalToIso(local: string): string {
   return new Date(`${local}:00-05:00`).toISOString();
 }
 
-function displayValue(
-  value: string | null | undefined,
+function defaultDisplayValue(
+  value: string,
   kind: FilterChipProps["kind"],
   options?: FilterChipSelectOption[],
-): string | null {
-  if (!value) return null;
+): string {
   if (kind === "select" && options) {
     return options.find((o) => o.value === value)?.label ?? value;
   }
@@ -114,26 +117,47 @@ export function FilterChip({
   options,
   onChange,
   emptyTone = "muted",
+  formatValue,
+  focusOnEdit = true,
 }: FilterChipProps) {
   const [editing, setEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement | HTMLSelectElement>(null);
   const resolvedTone = active ? "accent" : tone;
   const hasValue = Boolean(value && value.length > 0);
   const display = hasValue
-    ? displayValue(value, kind, options)
+    ? (formatValue?.(value!) ??
+      defaultDisplayValue(value!, kind, options))
     : (placeholder ?? label);
   const chipTone = hasValue ? resolvedTone : emptyTone;
+  const isPickerKind = kind === "date" || kind === "datetime";
 
   useEffect(() => {
-    if (editing && inputRef.current) {
-      inputRef.current.focus();
-      if ("select" in inputRef.current) {
-        (inputRef.current as HTMLInputElement).select?.();
+    if (!editing || !inputRef.current) return;
+
+    const el = inputRef.current as HTMLInputElement;
+
+    if (isPickerKind) {
+      try {
+        el.showPicker?.();
+      } catch {
+        /* showPicker may throw if not user-gesture in some browsers */
+      }
+      if (focusOnEdit) {
+        el.focus();
+      }
+      return;
+    }
+
+    if (focusOnEdit) {
+      el.focus();
+      if ("select" in el) {
+        (el as HTMLInputElement).select?.();
       }
     }
-  }, [editing]);
+  }, [editing, isPickerKind, focusOnEdit]);
 
   const shellClass = `inline-flex items-center rounded-full border font-medium transition-colors ${toneClasses[chipTone]} ${sizeClasses[size]}`;
+  const editingShellClass = `${shellClass} ring-1 ring-[#5E6AD2]`;
 
   if (!editable) {
     if (onClick) {
@@ -171,35 +195,72 @@ export function FilterChip({
       );
     }
 
-    const inputType = kind === "datetime" ? "datetime-local" : kind === "date" ? "date" : "text";
+    if (isPickerKind) {
+      const inputType = kind === "datetime" ? "datetime-local" : "date";
+
+      return (
+        <span className="relative inline-flex">
+          <button
+            type="button"
+            className={editingShellClass}
+            onClick={() => {
+              try {
+                (inputRef.current as HTMLInputElement)?.showPicker?.();
+              } catch {
+                (inputRef.current as HTMLInputElement)?.focus();
+              }
+            }}
+          >
+            {display}
+          </button>
+          <input
+            ref={inputRef as React.RefObject<HTMLInputElement>}
+            type={inputType}
+            tabIndex={-1}
+            aria-hidden
+            className="pointer-events-none absolute h-0 w-0 opacity-0"
+            defaultValue={
+              kind === "date"
+                ? toDateInputValue(value)
+                : toDatetimeLocalValue(value)
+            }
+            onChange={(e) => {
+              const v = e.target.value;
+              if (kind === "date" && v) finish(dateInputToIso(v));
+              else if (kind === "datetime" && v) finish(datetimeLocalToIso(v));
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setEditing(false);
+            }}
+            onBlur={(e) => {
+              const v = e.target.value;
+              if (kind === "date" && v) finish(dateInputToIso(v));
+              else if (kind === "datetime" && v) finish(datetimeLocalToIso(v));
+              else setEditing(false);
+            }}
+          />
+        </span>
+      );
+    }
+
+    const inputType = "text";
 
     return (
       <input
         ref={inputRef as React.RefObject<HTMLInputElement>}
         type={inputType}
         className={`${shellClass} min-w-[120px] bg-white text-zinc-900 outline-none ring-1 ring-[#5E6AD2]`}
-        defaultValue={
-          kind === "date"
-            ? toDateInputValue(value)
-            : kind === "datetime"
-              ? toDatetimeLocalValue(value)
-              : (value ?? "")
-        }
+        defaultValue={value ?? ""}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
             const v = (e.target as HTMLInputElement).value;
-            if (kind === "date" && v) finish(dateInputToIso(v));
-            else if (kind === "datetime" && v) finish(datetimeLocalToIso(v));
-            else finish(v.trim() || null);
+            finish(v.trim() || null);
           }
           if (e.key === "Escape") setEditing(false);
         }}
         onBlur={(e) => {
-          const v = e.target.value;
-          if (kind === "date" && v) finish(dateInputToIso(v));
-          else if (kind === "datetime" && v) finish(datetimeLocalToIso(v));
-          else finish(v.trim() || null);
+          finish(e.target.value.trim() || null);
         }}
       />
     );

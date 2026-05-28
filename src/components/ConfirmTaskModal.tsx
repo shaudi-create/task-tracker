@@ -1,8 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FilterChip } from "@/components/FilterChip";
-import { formatEstimateMinutes } from "@/lib/format";
+import {
+  formatDueChipLabel,
+  formatEstimateMinutes,
+  formatSchedChipLabel,
+} from "@/lib/format";
 import type { ParseApiResponse } from "@/lib/schemas/parse";
 import type { Project } from "@/lib/schemas/project";
 import { LocationTag, Priority, type Task } from "@/lib/schemas/task";
@@ -98,6 +102,7 @@ export function ConfirmTaskModal({
 }: ConfirmTaskModalProps) {
   const [draft, setDraft] = useState<TaskDraft>(initial);
   const [estimating, setEstimating] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -105,10 +110,19 @@ export function ConfirmTaskModal({
     setDraft(initial);
     setEstimating(false);
 
+    const frame = requestAnimationFrame(() => {
+      titleInputRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open, initial]);
+
+  useEffect(() => {
+    if (!open) return;
+
     const needsEstimate =
       initial.estimate_minutes == null && initial.title.trim().length > 0;
 
-    if (!needsEstimate) return;
+    if (!needsEstimate) return undefined;
 
     let cancelled = false;
 
@@ -205,17 +219,15 @@ export function ConfirmTaskModal({
           </p>
         )}
         <div className="flex items-start justify-between gap-2">
-          <FilterChip
-            label="Title"
-            placeholder="Task title"
-            size="md"
-            editable
-            kind="text"
+          <input
+            ref={titleInputRef}
+            type="text"
             value={draft.title}
-            onChange={(v) =>
-              setDraft((d) => ({ ...d, title: v ?? "" }))
+            onChange={(e) =>
+              setDraft((d) => ({ ...d, title: e.target.value }))
             }
-            emptyTone="muted"
+            placeholder="Task title"
+            className="min-w-0 flex-1 rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-base font-medium text-zinc-900 outline-none ring-[#5E6AD2] focus:ring-1"
           />
           <button
             type="button"
@@ -248,14 +260,18 @@ export function ConfirmTaskModal({
             editable
             kind="date"
             value={draft.due_at}
+            formatValue={formatDueChipLabel}
+            focusOnEdit={false}
             onChange={(v) => setDraft((d) => ({ ...d, due_at: v }))}
           />
           <FilterChip
             label="Scheduled"
-            placeholder="Set time…"
+            placeholder="Schedule for…"
             editable
             kind="datetime"
             value={draft.scheduled_at}
+            formatValue={formatSchedChipLabel}
+            focusOnEdit={false}
             onChange={(v) => setDraft((d) => ({ ...d, scheduled_at: v }))}
           />
           <FilterChip
