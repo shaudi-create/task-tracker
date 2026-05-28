@@ -8,6 +8,7 @@ import {
   formatEstimateMinutes,
   formatSchedChipLabel,
 } from "@/lib/format";
+import { parseDurationMinutes } from "@/lib/utils/duration";
 import type { ParseApiResponse } from "@/lib/schemas/parse";
 import type { Project } from "@/lib/schemas/project";
 import {
@@ -342,21 +343,27 @@ export function ConfirmTaskModal({
                 kind="text"
                 value={
                   draft.estimate_minutes != null
-                    ? formatEstimateMinutes(draft.estimate_minutes)
+                    ? `Est ${formatEstimateMinutes(draft.estimate_minutes)}`
                     : null
                 }
                 onChange={(v) => {
-                  const n = v
-                    ? Number.parseInt(v.replace(/\D/g, ""), 10)
-                    : null;
-                  setDraft((d) => ({
-                    ...d,
-                    estimate_minutes:
-                      n != null && !Number.isNaN(n)
-                        ? Math.max(0, Math.round(n / 5) * 5)
-                        : null,
-                    estimate_rationale: null,
-                  }));
+                  setDraft((d) => {
+                    if (!v) {
+                      return { ...d, estimate_minutes: null, estimate_rationale: null };
+                    }
+
+                    const parsed = parseDurationMinutes(v);
+                    if (parsed == null) {
+                      // Keep prior value if parsing fails.
+                      return d;
+                    }
+
+                    return {
+                      ...d,
+                      estimate_minutes: Math.max(0, parsed),
+                      estimate_rationale: null,
+                    };
+                  });
                 }}
               />
             </span>
