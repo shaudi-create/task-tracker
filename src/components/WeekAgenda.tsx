@@ -22,12 +22,13 @@ import type { DayCeilings, Settings } from "@/lib/schemas/settings";
 import type { Project } from "@/lib/schemas/project";
 import type { Task } from "@/lib/schemas/task";
 import { ceilingForDate } from "@/lib/utils/dayCeilings";
+import { sumWorkloadMinutesForDay } from "@/lib/utils/workload";
+import { groupTasksByWeekDay } from "@/lib/utils/weekAgenda";
 import {
   addDaysToDateString,
   localDateFromIso,
   localDateString,
 } from "@/lib/utils/tz";
-import { sumWorkloadMinutes } from "@/lib/utils/workload";
 import type { z } from "zod";
 import { TaskStatus } from "@/lib/schemas/task";
 
@@ -63,6 +64,21 @@ export function WeekAgenda() {
   const weekDays = useMemo(() => {
     const start = localDateString();
     return Array.from({ length: 7 }, (_, i) => addDaysToDateString(start, i));
+  }, []);
+
+  const today = localDateString();
+
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(
+    () => new Set([today]),
+  );
+
+  const toggleDay = useCallback((day: string) => {
+    setExpandedDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(day)) next.delete(day);
+      else next.add(day);
+      return next;
+    });
   }, []);
 
   const load = useCallback(async () => {
@@ -106,19 +122,10 @@ export function WeekAgenda() {
     [projects],
   );
 
-  const tasksByDay = useMemo(() => {
-    const map = new Map<string, Task[]>();
-    for (const day of weekDays) {
-      map.set(day, []);
-    }
-    for (const task of tasks) {
-      if (!task.scheduled_at) continue;
-      const day = localDateFromIso(task.scheduled_at);
-      const bucket = map.get(day);
-      if (bucket) bucket.push(task);
-    }
-    return map;
-  }, [tasks, weekDays]);
+  const tasksByDay = useMemo(
+    () => groupTasksByWeekDay(tasks, weekDays),
+    [tasks, weekDays],
+  );
 
   async function patchTask(id: string, body: Record<string, unknown>) {
     setBusyId(id);
@@ -199,11 +206,11 @@ export function WeekAgenda() {
         }),
       });
       setTasks((prev) => {
-        const day = updated.scheduled_at
-          ? localDateFromIso(updated.scheduled_at)
-          : null;
-        const inWeek = day && weekDays.includes(day);
-        if (!inWeek) return prev.filter((t) => t.id !== updated.id);
+        const stillInWeek =
+          updated.status === "In Progress" ||
+          (updated.scheduled_at &&
+            weekDays.includes(localDateFromIso(updated.scheduled_at)));
+        if (!stillInWeek) return prev.filter((t) => t.id !== updated.id);
         return prev.map((t) => (t.id === updated.id ? updated : t));
       });
       setEditTask(null);
@@ -239,7 +246,8 @@ export function WeekAgenda() {
 
       {weekDays.map((day) => {
         const dayTasks = tasksByDay.get(day) ?? [];
-        const totalMinutes = sumWorkloadMinutes(dayTasks);
+        const expanded = expandedDays.has(day);
+        const totalMinutes = sumWorkloadMinutesForDay(tasks, day);
         const ceiling =
           dayCeilings != null
             ? ceilingForDate(day, dayCeilings, fallbackCeiling)
@@ -252,32 +260,35 @@ export function WeekAgenda() {
               totalMinutes={totalMinutes}
               taskCount={dayTasks.length}
               ceilingMinutes={ceiling}
+              expanded={expanded}
+              onToggle={() => toggleDay(day)}
             />
-            {dayTasks.length === 0 ? (
-              <p className="py-4 text-center text-xs text-zinc-400">
-                No tasks scheduled.
-              </p>
-            ) : (
-              dayTasks.map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  projectName={
-                    task.project_id
-                      ? projectNames.get(task.project_id)
-                      : null
-                  }
-                  busy={busyId === task.id}
-                  onStatusChange={(status) =>
-                    handleStatusChange(task, status)
-                  }
-                  onEdit={() => {
-                    setEditTask(task);
-                    setModalDraft(taskToDraft(task));
-                  }}
-                />
-              ))
-            )}
+            {expanded &&
+              (dayTasks.length === 0 ? (
+                <p className="py-4 text-center text-xs text-zinc-400">
+                  No tasks scheduled.
+                </p>
+              ) : (
+                dayTasks.map((task) => (
+                  <TaskRow
+                    key={task.id}
+                    task={task}
+                    projectName={
+                      task.project_id
+                        ? projectNames.get(task.project_id)
+                        : null
+                    }
+                    busy={busyId === task.id}
+                    onStatusChange={(status) =>
+                      handleStatusChange(task, status)
+                    }
+                    onEdit={() => {
+                      setEditTask(task);
+                      setModalDraft(taskToDraft(task));
+                    }}
+                  />
+                ))
+              ))}
           </section>
         );
       })}

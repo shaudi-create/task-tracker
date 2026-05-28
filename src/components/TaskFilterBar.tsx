@@ -1,6 +1,9 @@
 "use client";
 
 import { FilterChip } from "@/components/FilterChip";
+import { STATUS_DOT_BG } from "@/lib/statusColors";
+import { TaskStatus } from "@/lib/schemas/task";
+import type { z } from "zod";
 
 export const TASK_FILTERS = [
   "All",
@@ -17,6 +20,8 @@ export type TaskFilter = (typeof TASK_FILTERS)[number];
 
 export type TasksViewFilter = "Today" | TaskFilter;
 
+type TaskStatusValue = z.infer<typeof TaskStatus>;
+
 const FILTER_CHIPS: TasksViewFilter[] = ["Today", ...TASK_FILTERS];
 
 type TaskFilterBarProps = {
@@ -30,13 +35,7 @@ function statusDotClass(
 ): string | null {
   if (filter === "All" || filter === "Today") return null;
   if (active) return "bg-white";
-  if (filter === "Inbox" || filter === "Backlog") return "bg-zinc-400";
-  if (filter === "Scheduled") return "bg-blue-500";
-  if (filter === "In Progress") return "bg-[#5E6AD2]";
-  if (filter === "Paused") return "bg-[#F59E0B]";
-  if (filter === "Done") return "bg-green-500";
-  if (filter === "Dropped") return "bg-zinc-400";
-  return null;
+  return STATUS_DOT_BG[filter as TaskStatusValue];
 }
 
 export function TaskFilterBar({ active, onChange }: TaskFilterBarProps) {

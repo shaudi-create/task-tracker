@@ -163,7 +163,7 @@ export function Sidebar() {
 
   return (
     <aside className="flex w-[220px] shrink-0 flex-col border-r border-zinc-200 bg-zinc-50">
-      <div className="px-4 py-3 text-xs font-medium text-zinc-600">
+      <div className="mb-6 px-4 pt-3 text-lg font-semibold text-zinc-900">
         Task Tracker
       </div>
       <nav className="flex flex-col gap-0.5 px-2">

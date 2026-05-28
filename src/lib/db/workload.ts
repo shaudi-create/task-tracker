@@ -11,8 +11,13 @@ export async function getDayScheduledWorkloadMinutes(
     SELECT COALESCE(SUM(estimate_minutes), 0)::int AS total
     FROM tasks
     WHERE status IN ('Scheduled', 'In Progress', 'Paused')
-      AND scheduled_at IS NOT NULL
-      AND (scheduled_at AT TIME ZONE ${DEFAULT_TIMEZONE})::date = ${anchor}::date
+      AND (
+        status = 'In Progress'
+        OR (
+          scheduled_at IS NOT NULL
+          AND (scheduled_at AT TIME ZONE ${DEFAULT_TIMEZONE})::date = ${anchor}::date
+        )
+      )
   `;
 
   return Number((rows[0] as { total: number }).total);

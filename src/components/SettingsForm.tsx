@@ -98,8 +98,9 @@ export function SettingsForm() {
               <div className="flex items-center gap-1.5">
                 <input
                   type="number"
-                  min={15}
-                  step={15}
+                  min={0}
+                  max={1440}
+                  step={1}
                   value={ceilings[key]}
                   onChange={(e) => setDay(key, Number(e.target.value))}
                   className="w-24 rounded border border-zinc-200 px-2 py-1.5 text-right text-sm"

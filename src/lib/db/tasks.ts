@@ -71,9 +71,14 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskType[]> {
     const weekEnd = addDaysToDateString(anchor, 6);
     rows = await sql`
       SELECT * FROM tasks
-      WHERE scheduled_at IS NOT NULL
-        AND (scheduled_at AT TIME ZONE ${DEFAULT_TIMEZONE})::date BETWEEN ${anchor}::date AND ${weekEnd}::date
-      ORDER BY scheduled_at ASC, created_at ASC
+      WHERE (
+        (
+          scheduled_at IS NOT NULL
+          AND (scheduled_at AT TIME ZONE ${DEFAULT_TIMEZONE})::date BETWEEN ${anchor}::date AND ${weekEnd}::date
+        )
+        OR status = 'In Progress'
+      )
+      ORDER BY scheduled_at ASC NULLS LAST, created_at ASC
     `;
   } else if (filters.filter === "week") {
     const anchor = filters.date

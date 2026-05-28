@@ -5,12 +5,14 @@ import {
   type DayKey,
 } from "@/lib/utils/dayCeilings";
 
-const ceilingMinutes = z
+const ceilingMinutes = z.number().int().min(0).max(1440);
+
+const legacyDailyCeilingMinutes = z
   .number()
   .int()
   .min(15)
   .refine((n) => n % 15 === 0, {
-    message: "ceiling minutes must be a multiple of 15",
+    message: "daily_ceiling_minutes must be a multiple of 15",
   });
 
 export const DayCeilings = z.object({
@@ -35,7 +37,7 @@ export type Settings = z.infer<typeof Settings>;
 
 export const UpdateSettingsBody = z
   .object({
-    daily_ceiling_minutes: ceilingMinutes,
+    daily_ceiling_minutes: legacyDailyCeilingMinutes,
     day_ceilings: DayCeilings.partial(),
     github_repo: z.string().min(1).max(200).nullable(),
   })

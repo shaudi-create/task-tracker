@@ -9,6 +9,8 @@ type WeekDayHeaderProps = {
   totalMinutes: number;
   taskCount: number;
   ceilingMinutes: number;
+  expanded: boolean;
+  onToggle: () => void;
 };
 
 function formatAgendaHeading(dateStr: string): string {
@@ -27,24 +29,36 @@ export function WeekDayHeader({
   totalMinutes,
   taskCount,
   ceilingMinutes,
+  expanded,
+  onToggle,
 }: WeekDayHeaderProps) {
   const overbooked = totalMinutes > ceilingMinutes;
   const dueLabel = taskCount === 1 ? "1 due" : `${taskCount} due`;
 
   return (
     <div className="mb-2">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-base font-semibold text-zinc-900">
-          {formatAgendaHeading(date)}
-        </h2>
-        <p className="text-sm text-zinc-500">
-          <span className="font-medium text-zinc-700">
-            Total: {formatEstimateMinutes(totalMinutes)}
-          </span>
-          {" · "}
-          {dueLabel}
-        </p>
-      </div>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full rounded text-left hover:bg-zinc-50/80"
+        aria-expanded={expanded}
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-2 py-0.5">
+          <h2 className="flex items-center gap-1.5 text-base font-semibold text-zinc-900">
+            <span className="w-3 shrink-0 text-center text-xs text-zinc-500" aria-hidden>
+              {expanded ? "▾" : "▸"}
+            </span>
+            {formatAgendaHeading(date)}
+          </h2>
+          <p className="text-sm text-zinc-500">
+            <span className="font-medium text-zinc-700">
+              Total: {formatEstimateMinutes(totalMinutes)}
+            </span>
+            {" · "}
+            {dueLabel}
+          </p>
+        </div>
+      </button>
       {overbooked && (
         <p
           className="mt-2 border-l-4 border-amber-400 bg-amber-50 px-3 py-2 text-xs text-amber-900"
