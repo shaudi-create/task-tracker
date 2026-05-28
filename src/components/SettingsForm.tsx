@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { notifyTasksUpdated } from "@/lib/events";
 import {
   DAY_KEYS,
@@ -11,6 +12,7 @@ import {
 import type { DayCeilings, Settings } from "@/lib/schemas/settings";
 
 export function SettingsForm() {
+  const router = useRouter();
   const [ceilings, setCeilings] = useState<DayCeilings>(DEFAULT_DAY_CEILINGS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -55,6 +57,7 @@ export function SettingsForm() {
       setCeilings(updated.day_ceilings);
       setToast("Work limits saved");
       notifyTasksUpdated();
+      router.refresh();
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to save work limits",
@@ -62,7 +65,7 @@ export function SettingsForm() {
     } finally {
       setSaving(false);
     }
-  }, [ceilings]);
+  }, [ceilings, router]);
 
   const handleReset = useCallback(() => {
     setCeilings({ ...DEFAULT_DAY_CEILINGS });

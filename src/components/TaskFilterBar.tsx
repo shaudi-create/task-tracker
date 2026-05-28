@@ -23,6 +23,9 @@ export type TasksViewFilter = "Today" | TaskFilter;
 type TaskStatusValue = z.infer<typeof TaskStatus>;
 
 const FILTER_CHIPS: TasksViewFilter[] = ["Today", ...TASK_FILTERS];
+const TASK_FILTER_CHIPS: TasksViewFilter[] = FILTER_CHIPS.filter(
+  (f) => f !== "Inbox",
+);
 
 type TaskFilterBarProps = {
   active: TasksViewFilter;
@@ -41,7 +44,7 @@ function statusDotClass(
 export function TaskFilterBar({ active, onChange }: TaskFilterBarProps) {
   return (
     <div className="mt-2 flex flex-wrap gap-1.5">
-      {FILTER_CHIPS.map((filter) => (
+      {TASK_FILTER_CHIPS.map((filter) => (
         <FilterChip
           key={filter}
           label={filter}
@@ -62,6 +65,6 @@ export function TaskFilterBar({ active, onChange }: TaskFilterBarProps) {
 }
 
 export function filterIndexToFilter(index: number): TasksViewFilter | null {
-  if (index < 1 || index > FILTER_CHIPS.length) return null;
-  return FILTER_CHIPS[index - 1];
+  if (index < 1 || index > TASK_FILTER_CHIPS.length) return null;
+  return TASK_FILTER_CHIPS[index - 1];
 }

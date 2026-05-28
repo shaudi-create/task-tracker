@@ -91,6 +91,14 @@ export default function GitHubInboxPage() {
           {syncing ? "Syncing…" : "Sync now"}
         </button>
       </div>
+      <p className="mt-2 text-sm text-zinc-500">
+        Recent open issues pulled from{" "}
+        <span className="font-medium text-zinc-700">
+          {repo ?? "your connected repo"}
+        </span>
+        . Set a status to move an issue into your workflow, or click Sync to
+        pull the latest.
+      </p>
 
       {result && (
         <p className="mt-2 text-sm text-zinc-600" role="status">
