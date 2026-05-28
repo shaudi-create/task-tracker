@@ -160,7 +160,7 @@ export function FilterChip({
     }
   }, [editing, isPickerKind, focusOnEdit]);
 
-  const shellClass = `inline-flex items-center rounded-full border font-medium transition-colors ${toneClasses[chipTone]} ${sizeClasses[size]}`;
+  const shellClass = `inline-flex items-center gap-1.5 rounded-full border font-medium transition-colors ${toneClasses[chipTone]} ${sizeClasses[size]}`;
   const editingShellClass = `${shellClass} ring-1 ring-[#5E6AD2]`;
 
   if (!editable) {

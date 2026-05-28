@@ -48,7 +48,8 @@ export function TaskFilterBar({ active, onChange }: TaskFilterBarProps) {
           prefix={
             statusDotClass(filter, active === filter) ? (
               <span
-                className={`h-1.5 w-1.5 rounded-full ${statusDotClass(filter, active === filter)}`}
+                className={`pointer-events-none inline-block h-1.5 w-1.5 rounded-full ${statusDotClass(filter, active === filter)}`}
+                aria-hidden
               />
             ) : undefined
           }
