@@ -4,6 +4,7 @@ import { mapTaskRow } from "@/lib/db/mappers";
 import {
   CreateTaskBody,
   CompleteTaskBody,
+  normalizeSubtasks,
   normalizeTags,
   Task,
   truncateDescription,
@@ -130,6 +131,7 @@ export async function createTask(
   const { value: description, trimmed: descriptionTrimmed } =
     truncateDescription(input.description ?? null);
   const tags = normalizeTags(input.tags);
+  const subtasks = normalizeSubtasks(input.subtasks);
 
   const rows = await sql`
     INSERT INTO tasks (
@@ -162,7 +164,7 @@ export async function createTask(
       ${input.location_tag},
       ${input.project_id ?? null},
       ${tags},
-      ${JSON.stringify(input.subtasks)}::jsonb,
+      ${JSON.stringify(subtasks)}::jsonb,
       ${input.source},
       ${input.github_issue_id ?? null},
       ${input.github_issue_url ?? null},
@@ -233,6 +235,7 @@ export async function updateTask(
   const { value: description, trimmed: descriptionTrimmed } =
     truncateDescription(merged.description);
   const tags = normalizeTags(merged.tags);
+  const subtasks = normalizeSubtasks(merged.subtasks);
 
   let completedAt: string | null = existing.completed_at;
   if (merged.status === "Done" && !completedAt) {
@@ -255,7 +258,7 @@ export async function updateTask(
       location_tag = ${merged.location_tag},
       project_id = ${merged.project_id},
       tags = ${tags},
-      subtasks = ${JSON.stringify(merged.subtasks)}::jsonb,
+      subtasks = ${JSON.stringify(subtasks)}::jsonb,
       source = ${merged.source},
       github_issue_id = ${merged.github_issue_id},
       github_issue_url = ${merged.github_issue_url},

@@ -22,6 +22,10 @@ import type { DayCeilings, Settings } from "@/lib/schemas/settings";
 import type { Project } from "@/lib/schemas/project";
 import type { Task } from "@/lib/schemas/task";
 import { ceilingForDate } from "@/lib/utils/dayCeilings";
+import {
+  DESCRIPTION_TRIMMED_MESSAGE,
+  descriptionWasTrimmed,
+} from "@/lib/utils/taskDraft";
 import { sumWorkloadMinutesForDay } from "@/lib/utils/workload";
 import { groupTasksByWeekDay } from "@/lib/utils/weekAgenda";
 import {
@@ -60,6 +64,7 @@ export function WeekAgenda() {
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [modalDraft, setModalDraft] = useState<TaskDraft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   const weekDays = useMemo(() => {
     const start = localDateString();
@@ -104,6 +109,12 @@ export function WeekAgenda() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 3000);
+    return () => window.clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
     function onRefresh() {
@@ -190,11 +201,13 @@ export function WeekAgenda() {
     if (!editTask) return;
     setSaving(true);
     try {
-      const updated = await fetchJson<Task>(`/api/tasks/${editTask.id}`, {
+      const res = await fetch(`/api/tasks/${editTask.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: draft.title,
+          description: draft.description,
+          subtasks: draft.subtasks,
           priority: draft.priority ?? "Medium",
           location_tag: draft.location_tag ?? "home",
           estimate_minutes: draft.estimate_minutes,
@@ -205,6 +218,15 @@ export function WeekAgenda() {
           tags: draft.tags,
         }),
       });
+      const data: unknown = await res.json();
+      if (!res.ok) {
+        const err = data as { error?: { message?: string } };
+        throw new Error(err.error?.message ?? "Failed to save task");
+      }
+      const updated = data as Task;
+      if (descriptionWasTrimmed(res)) {
+        setToast(DESCRIPTION_TRIMMED_MESSAGE);
+      }
       setTasks((prev) => {
         const stillInWeek =
           updated.status === "In Progress" ||
@@ -307,6 +329,15 @@ export function WeekAgenda() {
         }
       />
 
+      {toast && (
+        <div
+          className="fixed bottom-6 right-6 z-[60] rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-900 shadow-lg"
+          role="status"
+        >
+          {toast}
+        </div>
+      )}
+
       {modalDraft && (
         <ConfirmTaskModal
           open={editTask !== null}
@@ -319,6 +350,7 @@ export function WeekAgenda() {
             setModalDraft(null);
           }}
           onSave={handleSaveEdit}
+          onDescriptionTrimmed={() => setToast(DESCRIPTION_TRIMMED_MESSAGE)}
         />
       )}
     </div>

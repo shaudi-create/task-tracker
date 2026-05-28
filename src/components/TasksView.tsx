@@ -24,6 +24,10 @@ import type { ParseApiResponse } from "@/lib/schemas/parse";
 import type { Project } from "@/lib/schemas/project";
 import type { Task } from "@/lib/schemas/task";
 import { PROJECTS_UPDATED } from "@/lib/events";
+import {
+  DESCRIPTION_TRIMMED_MESSAGE,
+  descriptionWasTrimmed,
+} from "@/lib/utils/taskDraft";
 
 function parseViewFilter(searchParams: URLSearchParams): TasksViewFilter {
   if (searchParams.get("filter") === "today") return "Today";
@@ -54,6 +58,7 @@ export function TasksView() {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const setViewFilter = useCallback(
     (next: TasksViewFilter) => {
@@ -91,6 +96,12 @@ export function TasksView() {
   useEffect(() => {
     loadProjects();
   }, [loadProjects]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 3000);
+    return () => window.clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
     function onProjectsUpdated() {
@@ -154,6 +165,8 @@ export function TasksView() {
       try {
         const body = {
           title: draft.title,
+          description: draft.description,
+          subtasks: draft.subtasks,
           priority: draft.priority ?? "Medium",
           location_tag: draft.location_tag ?? "home",
           estimate_minutes: draft.estimate_minutes,
@@ -174,6 +187,9 @@ export function TasksView() {
             const err = (await res.json()) as { error?: { message?: string } };
             throw new Error(err.error?.message ?? "Failed to update task");
           }
+          if (descriptionWasTrimmed(res)) {
+            setToast(DESCRIPTION_TRIMMED_MESSAGE);
+          }
         } else {
           const res = await fetch("/api/tasks", {
             method: "POST",
@@ -183,6 +199,9 @@ export function TasksView() {
           if (!res.ok) {
             const err = (await res.json()) as { error?: { message?: string } };
             throw new Error(err.error?.message ?? "Failed to create task");
+          }
+          if (descriptionWasTrimmed(res)) {
+            setToast(DESCRIPTION_TRIMMED_MESSAGE);
           }
         }
 
@@ -230,6 +249,15 @@ export function TasksView() {
         </p>
       )}
 
+      {toast && (
+        <div
+          className="fixed bottom-6 right-6 z-[60] rounded-md border border-zinc-200 bg-white px-4 py-2 text-sm text-zinc-900 shadow-lg"
+          role="status"
+        >
+          {toast}
+        </div>
+      )}
+
       {modalDraft && (
         <ConfirmTaskModal
           open={modalOpen}
@@ -243,6 +271,7 @@ export function TasksView() {
             setEditingTaskId(null);
           }}
           onSave={handleSave}
+          onDescriptionTrimmed={() => setToast(DESCRIPTION_TRIMMED_MESSAGE)}
         />
       )}
     </>

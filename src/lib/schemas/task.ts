@@ -141,6 +141,24 @@ export function truncateDescription(value: string | null | undefined): {
   return { value: value.slice(0, 2000), trimmed: true };
 }
 
+export type SubtaskInput = z.infer<typeof Subtask>;
+
+export function normalizeSubtasks(
+  subtasks: SubtaskInput[] | undefined,
+): SubtaskInput[] {
+  if (!subtasks) return [];
+  const normalized: SubtaskInput[] = [];
+  for (const raw of subtasks) {
+    const text = raw.text.trim().slice(0, 200);
+    if (!text) continue;
+    normalized.push({ text, done: Boolean(raw.done) });
+  }
+  if (normalized.length > 20) {
+    throw new Error("Cannot exceed 20 subtasks per task");
+  }
+  return normalized;
+}
+
 export function normalizeTags(tags: string[] | undefined): string[] {
   if (!tags) return [];
   const normalized: string[] = [];

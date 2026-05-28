@@ -75,6 +75,10 @@ export function TaskRow({
   const isDropped = task.status === "Dropped";
   const showWeather = false; // v1: weather deferred (step 12)
   const restMeta = buildRestMetadata(task);
+  const subtaskTotal = task.subtasks?.length ?? 0;
+  const subtaskDone =
+    task.subtasks?.filter((s) => s.done).length ?? 0;
+  const hasDescription = Boolean(task.description?.trim());
 
   return (
     <div className="group flex h-10 items-center gap-2 border-b border-zinc-100 px-3 text-sm">
@@ -130,6 +134,18 @@ export function TaskRow({
                   aria-hidden
                 />
                 {projectName}
+              </span>
+            )}
+            {subtaskTotal > 0 && (
+              <span className={grayMeta}>
+                {" · "}
+                {subtaskDone}/{subtaskTotal}
+              </span>
+            )}
+            {hasDescription && (
+              <span className={grayMeta} title="Has description">
+                {" · "}
+                <span aria-hidden>📄</span>
               </span>
             )}
         </span>
