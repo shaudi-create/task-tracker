@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CompletionLogModal,
   type CompletionPayload,
   type TerminalStateValue,
 } from "@/components/CompletionLogModal";
 import { TaskRow } from "@/components/TaskRow";
-import type { TaskFilter } from "@/components/TaskFilterBar";
+import type { TasksViewFilter } from "@/components/TaskFilterBar";
 import type { Project } from "@/lib/schemas/project";
 import { PROJECTS_UPDATED, notifyTasksUpdated } from "@/lib/events";
+import { taskMatchesToday } from "@/lib/utils/todayFilter";
 import { TaskStatus, type Task } from "@/lib/schemas/task";
 import type { z } from "zod";
 
@@ -25,9 +26,13 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   return data as T;
 }
 
-function tasksUrl(filter: TaskFilter, projectId: string | null): string {
+function tasksUrl(filter: TasksViewFilter, projectId: string | null): string {
   const params = new URLSearchParams();
-  if (filter !== "All") params.set("status", filter);
+  if (filter === "Today") {
+    params.set("filter", "today");
+  } else if (filter !== "All") {
+    params.set("status", filter);
+  }
   if (projectId) params.set("project", projectId);
   const query = params.toString();
   return query ? `/api/tasks?${query}` : "/api/tasks";
@@ -39,15 +44,17 @@ type CompletionModalState = {
 };
 
 type TaskListProps = {
-  filter: TaskFilter;
+  filter: TasksViewFilter;
   projectId?: string | null;
   onEditTask?: (task: Task) => void;
+  onTasksLoaded?: (tasks: Task[]) => void;
 };
 
 export function TaskList({
   filter,
   projectId = null,
   onEditTask,
+  onTasksLoaded,
 }: TaskListProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -57,6 +64,8 @@ export function TaskList({
   const [completionModal, setCompletionModal] =
     useState<CompletionModalState | null>(null);
   const [completing, setCompleting] = useState(false);
+  const onTasksLoadedRef = useRef(onTasksLoaded);
+  onTasksLoadedRef.current = onTasksLoaded;
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +81,7 @@ export function TaskList({
         if (cancelled) return;
         setTasks(taskRows);
         setProjects(projectRows);
+        onTasksLoadedRef.current?.(taskRows);
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "Failed to load tasks");
@@ -135,12 +145,23 @@ export function TaskList({
   function applyUpdatedTask(updated: Task) {
     setTasks((prev) => {
       if (projectId && updated.project_id !== projectId) {
-        return prev.filter((t) => t.id !== updated.id);
+        const next = prev.filter((t) => t.id !== updated.id);
+        onTasksLoadedRef.current?.(next);
+        return next;
       }
-      if (filter !== "All" && updated.status !== filter) {
-        return prev.filter((t) => t.id !== updated.id);
+      if (filter === "Today" && !taskMatchesToday(updated)) {
+        const next = prev.filter((t) => t.id !== updated.id);
+        onTasksLoadedRef.current?.(next);
+        return next;
       }
-      return prev.map((t) => (t.id === updated.id ? updated : t));
+      if (filter !== "All" && filter !== "Today" && updated.status !== filter) {
+        const next = prev.filter((t) => t.id !== updated.id);
+        onTasksLoadedRef.current?.(next);
+        return next;
+      }
+      const next = prev.map((t) => (t.id === updated.id ? updated : t));
+      onTasksLoadedRef.current?.(next);
+      return next;
     });
   }
 
@@ -177,6 +198,11 @@ export function TaskList({
     }
   }
 
+  const emptyMessage =
+    filter === "Today"
+      ? "Nothing on the docket today."
+      : "Nothing here yet. Try typing a task above.";
+
   return (
     <>
       {error && (
@@ -194,8 +220,12 @@ export function TaskList({
         ))}
 
       {!loading && tasks.length === 0 && (
-        <p className="py-8 text-center text-sm text-zinc-500">
-          Nothing here yet. Try typing a task above.
+        <p
+          className={`py-8 text-center text-xs text-zinc-400 ${
+            filter === "Today" ? "" : "text-sm text-zinc-500"
+          }`}
+        >
+          {emptyMessage}
         </p>
       )}
 

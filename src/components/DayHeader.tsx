@@ -12,6 +12,7 @@ type TodayWorkload = {
 
 type DayHeaderProps = {
   workload: TodayWorkload | null;
+  taskCount?: number;
   loading?: boolean;
 };
 
@@ -26,7 +27,7 @@ function formatTodayHeading(dateStr: string): string {
   });
 }
 
-export function DayHeader({ workload, loading }: DayHeaderProps) {
+export function DayHeader({ workload, taskCount = 0, loading }: DayHeaderProps) {
   const heading = workload
     ? formatTodayHeading(workload.date)
     : formatTodayHeading(
@@ -41,6 +42,12 @@ export function DayHeader({ workload, loading }: DayHeaderProps) {
       ? formatEstimateMinutes(workload.total_minutes)
       : "0m";
 
+  const dueLabel = loading
+    ? "…"
+    : taskCount === 1
+      ? "1 due"
+      : `${taskCount} due`;
+
   const overbooked =
     workload != null && workload.total_minutes > workload.ceiling_minutes;
 
@@ -49,8 +56,9 @@ export function DayHeader({ workload, loading }: DayHeaderProps) {
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold text-zinc-900">{heading}</h2>
         <p className="text-sm text-zinc-500">
-          <span className="font-medium text-zinc-700">{totalLabel}</span>{" "}
-          scheduled today
+          <span className="font-medium text-zinc-700">Total: {totalLabel}</span>
+          {" · "}
+          {dueLabel}
         </p>
       </div>
       {overbooked && workload && (

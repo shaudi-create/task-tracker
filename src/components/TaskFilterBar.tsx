@@ -15,13 +15,20 @@ export const TASK_FILTERS = [
 
 export type TaskFilter = (typeof TASK_FILTERS)[number];
 
+export type TasksViewFilter = "Today" | TaskFilter;
+
+const FILTER_CHIPS: TasksViewFilter[] = ["Today", ...TASK_FILTERS];
+
 type TaskFilterBarProps = {
-  active: TaskFilter;
-  onChange: (filter: TaskFilter) => void;
+  active: TasksViewFilter;
+  onChange: (filter: TasksViewFilter) => void;
 };
 
-function statusDotClass(filter: TaskFilter, active: boolean): string | null {
-  if (filter === "All") return null;
+function statusDotClass(
+  filter: TasksViewFilter,
+  active: boolean,
+): string | null {
+  if (filter === "All" || filter === "Today") return null;
   if (active) return "bg-white";
   if (filter === "Inbox" || filter === "Backlog") return "bg-zinc-400";
   if (filter === "Scheduled") return "bg-blue-500";
@@ -35,7 +42,7 @@ function statusDotClass(filter: TaskFilter, active: boolean): string | null {
 export function TaskFilterBar({ active, onChange }: TaskFilterBarProps) {
   return (
     <div className="mt-2 flex flex-wrap gap-1.5">
-      {TASK_FILTERS.map((filter) => (
+      {FILTER_CHIPS.map((filter) => (
         <FilterChip
           key={filter}
           label={filter}
@@ -54,7 +61,7 @@ export function TaskFilterBar({ active, onChange }: TaskFilterBarProps) {
   );
 }
 
-export function filterIndexToFilter(index: number): TaskFilter | null {
-  if (index < 1 || index > TASK_FILTERS.length) return null;
-  return TASK_FILTERS[index - 1];
+export function filterIndexToFilter(index: number): TasksViewFilter | null {
+  if (index < 1 || index > FILTER_CHIPS.length) return null;
+  return FILTER_CHIPS[index - 1];
 }

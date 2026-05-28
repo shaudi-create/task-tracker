@@ -12,9 +12,13 @@ type TodayWorkload = {
 
 type TodayWorkloadHeaderProps = {
   refreshKey?: number | string;
+  taskCount?: number;
 };
 
-export function TodayWorkloadHeader({ refreshKey }: TodayWorkloadHeaderProps) {
+export function TodayWorkloadHeader({
+  refreshKey,
+  taskCount = 0,
+}: TodayWorkloadHeaderProps) {
   const [workload, setWorkload] = useState<TodayWorkload | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -54,5 +58,7 @@ export function TodayWorkloadHeader({ refreshKey }: TodayWorkloadHeaderProps) {
     return () => window.removeEventListener(TASKS_UPDATED, onTasksUpdated);
   }, []);
 
-  return <DayHeader workload={workload} loading={loading} />;
+  return (
+    <DayHeader workload={workload} taskCount={taskCount} loading={loading} />
+  );
 }

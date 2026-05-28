@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ConfirmTaskModal,
   parseResponseToDraft,
@@ -10,9 +10,11 @@ import {
 } from "@/components/ConfirmTaskModal";
 import { QuickCapture } from "@/components/QuickCapture";
 import {
-  filterIndexToFilter,
+  TASK_FILTERS,
   TaskFilterBar,
+  filterIndexToFilter,
   type TaskFilter,
+  type TasksViewFilter,
 } from "@/components/TaskFilterBar";
 import { TaskList } from "@/components/TaskList";
 import { TodayWorkloadHeader } from "@/components/TodayWorkloadHeader";
@@ -23,17 +25,61 @@ import type { Project } from "@/lib/schemas/project";
 import type { Task } from "@/lib/schemas/task";
 import { PROJECTS_UPDATED } from "@/lib/events";
 
+function parseViewFilter(searchParams: URLSearchParams): TasksViewFilter {
+  if (searchParams.get("filter") === "today") return "Today";
+  const status = searchParams.get("status");
+  if (status && TASK_FILTERS.includes(status as TaskFilter) && status !== "All") {
+    return status as TaskFilter;
+  }
+  return "All";
+}
+
 export function TasksView() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const projectId = searchParams.get("project");
-  const [filter, setFilter] = useState<TaskFilter>("All");
+
+  const viewFilter = useMemo(
+    () => parseViewFilter(searchParams),
+    [searchParams],
+  );
+  const isToday = viewFilter === "Today";
+
   const [listKey, setListKey] = useState(0);
+  const [todayTaskCount, setTodayTaskCount] = useState(0);
   const [projects, setProjects] = useState<Project[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalDraft, setModalDraft] = useState<TaskDraft | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  const setViewFilter = useCallback(
+    (next: TasksViewFilter) => {
+      const params = new URLSearchParams();
+      if (projectId) params.set("project", projectId);
+      if (next === "Today") {
+        params.set("filter", "today");
+      } else if (next !== "All") {
+        params.set("status", next);
+      }
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname);
+    },
+    [pathname, projectId, router],
+  );
+
+  const handleTasksLoaded = useCallback(
+    (tasks: Task[]) => {
+      if (isToday) setTodayTaskCount(tasks.length);
+    },
+    [isToday],
+  );
+
+  useEffect(() => {
+    if (!isToday) setTodayTaskCount(0);
+  }, [isToday]);
 
   const loadProjects = useCallback(() => {
     void fetch("/api/projects")
@@ -68,11 +114,11 @@ export function TasksView() {
       const digit = Number(event.key);
       if (!Number.isInteger(digit)) return;
       const next = filterIndexToFilter(digit);
-      if (next) setFilter(next);
+      if (next) setViewFilter(next);
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [setViewFilter]);
 
   const openCreateModal = useCallback(
     (result: {
@@ -160,15 +206,21 @@ export function TasksView() {
     <>
       <TopBar>
         <QuickCapture onParsed={openCreateModal} disabled={modalOpen} />
-        <TaskFilterBar active={filter} onChange={setFilter} />
+        <TaskFilterBar active={viewFilter} onChange={setViewFilter} />
       </TopBar>
       <div className="px-6 py-4">
-        <TodayWorkloadHeader refreshKey={listKey} />
+        {isToday && (
+          <TodayWorkloadHeader
+            refreshKey={listKey}
+            taskCount={todayTaskCount}
+          />
+        )}
         <TaskList
-          key={`${listKey}-${projectId ?? ""}`}
-          filter={filter}
+          key={`${listKey}-${projectId ?? ""}-${viewFilter}`}
+          filter={viewFilter}
           projectId={projectId}
           onEditTask={openEditModal}
+          onTasksLoaded={handleTasksLoaded}
         />
       </div>
 
