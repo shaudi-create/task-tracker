@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { GitHubInboxRow } from "@/components/GitHubInboxRow";
 import type { Task } from "@/lib/schemas/task";
+import { useRouter } from "next/navigation";
 
 type SyncResult = { created: number; skipped: number; failed: number };
 
@@ -17,6 +18,7 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export default function GitHubInboxPage() {
+  const router = useRouter();
   const [repo, setRepo] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +62,7 @@ export default function GitHubInboxPage() {
       });
       setResult(res);
       await load();
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Sync failed");
     } finally {

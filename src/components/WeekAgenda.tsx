@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CompletionLogModal,
   type CompletionPayload,
@@ -49,6 +50,7 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export function WeekAgenda() {
+  const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [dayCeilings, setDayCeilings] = useState<DayCeilings | null>(null);
@@ -148,6 +150,7 @@ export function WeekAgenda() {
       });
       setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       notifyTasksUpdated();
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update task");
     } finally {
@@ -179,6 +182,7 @@ export function WeekAgenda() {
       setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       setCompletionModal(null);
       notifyTasksUpdated();
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save task");
     } finally {
@@ -227,6 +231,7 @@ export function WeekAgenda() {
       if (descriptionWasTrimmed(res)) {
         setToast(DESCRIPTION_TRIMMED_MESSAGE);
       }
+      router.refresh();
       setTasks((prev) => {
         const stillInWeek =
           updated.status === "In Progress" ||

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { StatusDot } from "@/components/StatusDot";
+import { useRouter } from "next/navigation";
 import type { Task } from "@/lib/schemas/task";
 import { bucketForMinutes } from "@/lib/schemas/ghBucket";
 import { TaskStatus } from "@/lib/schemas/task";
@@ -26,6 +27,7 @@ type GitHubInboxRowProps = {
 };
 
 export function GitHubInboxRow({ task, onRemove }: GitHubInboxRowProps) {
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const bucket = bucketForMinutes(task.estimate_minutes);
   const badge = BUCKET_BADGE[bucket];
@@ -44,6 +46,7 @@ export function GitHubInboxRow({ task, onRemove }: GitHubInboxRowProps) {
       if (status !== "Inbox") {
         onRemove?.(task.id);
       }
+      router.refresh();
     } finally {
       setBusy(false);
     }

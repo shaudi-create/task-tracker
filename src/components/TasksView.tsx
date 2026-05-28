@@ -205,6 +205,7 @@ export function TasksView() {
           }
         }
 
+        router.refresh();
         setModalOpen(false);
         setModalDraft(null);
         setEditingTaskId(null);
@@ -218,7 +219,7 @@ export function TasksView() {
         setSaving(false);
       }
     },
-    [editingTaskId],
+    [editingTaskId, router],
   );
 
   return (

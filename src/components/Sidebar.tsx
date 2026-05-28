@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { FilterChip } from "@/components/FilterChip";
 import { TASKS_UPDATED, notifyProjectsUpdated } from "@/lib/events";
@@ -32,6 +32,7 @@ function PencilIcon() {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const activeProjectId = searchParams.get("project");
   const [projects, setProjects] = useState<Project[]>([]);
@@ -126,6 +127,7 @@ export function Sidebar() {
       setNewProjectName("");
       setCreatingProject(false);
       notifyProjectsUpdated();
+      router.refresh();
     } catch (err) {
       setProjectError(
         err instanceof Error ? err.message : "Failed to create project",
@@ -181,6 +183,7 @@ export function Sidebar() {
       );
       cancelRename();
       notifyProjectsUpdated();
+      router.refresh();
     } catch (err) {
       setProjectError(
         err instanceof Error ? err.message : "Failed to rename project",

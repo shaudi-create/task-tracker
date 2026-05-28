@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   CompletionLogModal,
   type CompletionPayload,
@@ -56,6 +57,7 @@ export function TaskList({
   onEditTask,
   onTasksLoaded,
 }: TaskListProps) {
+  const router = useRouter();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,6 +128,7 @@ export function TaskList({
       });
       applyUpdatedTask(updated);
       notifyTasksUpdated();
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update task");
     } finally {
@@ -180,6 +183,7 @@ export function TaskList({
       applyUpdatedTask(updated);
       setCompletionModal(null);
       notifyTasksUpdated();
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save task");
     } finally {
