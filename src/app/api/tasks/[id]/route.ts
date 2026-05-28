@@ -5,6 +5,7 @@ import {
   zodErrorResponse,
 } from "@/lib/api/errors";
 import { softDeleteTask, updateTask } from "@/lib/db/tasks";
+import { revalidateTaskViews } from "@/lib/revalidate";
 import { UpdateTaskBody } from "@/lib/schemas/task";
 
 export const runtime = "nodejs";
@@ -28,6 +29,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return notFoundResponse("Task");
     }
 
+    revalidateTaskViews();
     const response = NextResponse.json(task);
     if (descriptionTrimmed) {
       response.headers.set("X-Description-Trimmed", "true");
@@ -49,6 +51,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     if (!task) {
       return notFoundResponse("Task");
     }
+    revalidateTaskViews();
     return NextResponse.json(task);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to delete task";

@@ -10,7 +10,6 @@ import type { Project } from "@/lib/schemas/project";
 const navItems = [
   { href: "/tasks", label: "Tasks", showInboxBadge: true },
   { href: "/week", label: "Week" },
-  { href: "/github-inbox", label: "GitHub Inbox" },
   { href: "/settings", label: "Settings" },
 ] as const;
 
@@ -202,6 +201,12 @@ export function Sidebar() {
             </Link>
           );
         })}
+        <span
+          className="cursor-not-allowed rounded px-2 py-1.5 text-sm text-zinc-400"
+          title="Deferred to v2"
+        >
+          GitHub Inbox
+        </span>
       </nav>
 
       <div className="mt-4 flex flex-col gap-1 px-2">

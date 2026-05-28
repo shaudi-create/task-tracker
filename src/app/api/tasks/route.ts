@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, zodErrorResponse } from "@/lib/api/errors";
 import { createTask, listDistinctTags, listTasks } from "@/lib/db/tasks";
+import { revalidateTaskViews } from "@/lib/revalidate";
 import { CreateTaskBody, TaskStatus } from "@/lib/schemas/task";
 
 export const runtime = "nodejs";
@@ -55,6 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { task, descriptionTrimmed } = await createTask(parsed.data);
+    revalidateTaskViews();
     const response = NextResponse.json(task, { status: 201 });
     if (descriptionTrimmed) {
       response.headers.set("X-Description-Trimmed", "true");

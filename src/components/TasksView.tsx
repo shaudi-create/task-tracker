@@ -15,7 +15,9 @@ import {
   type TaskFilter,
 } from "@/components/TaskFilterBar";
 import { TaskList } from "@/components/TaskList";
+import { TodayWorkloadHeader } from "@/components/TodayWorkloadHeader";
 import { TopBar } from "@/components/TopBar";
+import { notifyTasksUpdated } from "@/lib/events";
 import type { ParseApiResponse } from "@/lib/schemas/parse";
 import type { Project } from "@/lib/schemas/project";
 import type { Task } from "@/lib/schemas/task";
@@ -142,6 +144,7 @@ export function TasksView() {
         setModalDraft(null);
         setEditingTaskId(null);
         setListKey((k) => k + 1);
+        notifyTasksUpdated();
       } catch (err) {
         setSaveError(
           err instanceof Error ? err.message : "Failed to save task",
@@ -160,6 +163,7 @@ export function TasksView() {
         <TaskFilterBar active={filter} onChange={setFilter} />
       </TopBar>
       <div className="px-6 py-4">
+        <TodayWorkloadHeader refreshKey={listKey} />
         <TaskList
           key={`${listKey}-${projectId ?? ""}`}
           filter={filter}

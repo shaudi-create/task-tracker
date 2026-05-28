@@ -5,6 +5,7 @@ import {
   zodErrorResponse,
 } from "@/lib/api/errors";
 import { completeTask } from "@/lib/db/tasks";
+import { revalidateTaskViews } from "@/lib/revalidate";
 import { CompleteTaskBody } from "@/lib/schemas/task";
 
 export const runtime = "nodejs";
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return notFoundResponse("Task");
     }
 
+    revalidateTaskViews();
     return NextResponse.json(task);
   } catch (err) {
     const message =

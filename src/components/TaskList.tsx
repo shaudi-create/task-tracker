@@ -9,7 +9,7 @@ import {
 import { TaskRow } from "@/components/TaskRow";
 import type { TaskFilter } from "@/components/TaskFilterBar";
 import type { Project } from "@/lib/schemas/project";
-import { PROJECTS_UPDATED } from "@/lib/events";
+import { PROJECTS_UPDATED, notifyTasksUpdated } from "@/lib/events";
 import { TaskStatus, type Task } from "@/lib/schemas/task";
 import type { z } from "zod";
 
@@ -108,6 +108,7 @@ export function TaskList({
         body: JSON.stringify(body),
       });
       applyUpdatedTask(updated);
+      notifyTasksUpdated();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update task");
     } finally {
@@ -150,6 +151,7 @@ export function TaskList({
       );
       applyUpdatedTask(updated);
       setCompletionModal(null);
+      notifyTasksUpdated();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save task");
     } finally {
