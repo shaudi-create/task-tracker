@@ -21,7 +21,7 @@ export type TaskListFilters = {
   status?: string;
   project?: string;
   tag?: string;
-  filter?: "today" | "week";
+  filter?: "today" | "week" | "agenda";
   date?: string;
 };
 
@@ -62,6 +62,17 @@ export async function listTasks(filters: TaskListFilters): Promise<TaskType[]> {
       AND (${projectId}::text IS NULL OR project_id = ${projectId}::uuid)
       AND (${tag}::text IS NULL OR ${tag} = ANY(tags))
       ORDER BY created_at ASC
+    `;
+  } else if (filters.filter === "agenda") {
+    const anchor = filters.date
+      ? parseLocalDateString(filters.date)
+      : localDateString();
+    const weekEnd = addDaysToDateString(anchor, 6);
+    rows = await sql`
+      SELECT * FROM tasks
+      WHERE scheduled_at IS NOT NULL
+        AND (scheduled_at AT TIME ZONE ${DEFAULT_TIMEZONE})::date BETWEEN ${anchor}::date AND ${weekEnd}::date
+      ORDER BY scheduled_at ASC, created_at ASC
     `;
   } else if (filters.filter === "week") {
     const anchor = filters.date

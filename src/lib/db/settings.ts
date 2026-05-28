@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db/client";
 import { mapSettingsRow } from "@/lib/db/mappers";
 import {
+  DayCeilings,
   Settings,
   UpdateSettingsBody,
   type Settings as SettingsType,
@@ -25,10 +26,15 @@ export async function updateSettings(
   const githubRepo =
     patch.github_repo !== undefined ? patch.github_repo : current.github_repo;
 
+  const mergedDayCeilings = patch.day_ceilings
+    ? DayCeilings.parse({ ...current.day_ceilings, ...patch.day_ceilings })
+    : current.day_ceilings;
+
   const rows = await sql`
     UPDATE settings
     SET
       daily_ceiling_minutes = ${dailyCeiling},
+      day_ceilings = ${JSON.stringify(mergedDayCeilings)}::jsonb,
       github_repo = ${githubRepo},
       updated_at = now()
     WHERE id = 1

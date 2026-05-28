@@ -13,6 +13,13 @@ export function parseLocalDateString(dateStr: string): string {
   return dateStr;
 }
 
+/** Calendar date YYYY-MM-DD in America/New_York for an ISO instant. */
+export function localDateFromIso(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-CA", {
+    timeZone: DEFAULT_TIMEZONE,
+  });
+}
+
 export function addDaysToDateString(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   const utc = new Date(Date.UTC(y, m - 1, d + days));

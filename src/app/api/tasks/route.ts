@@ -24,10 +24,15 @@ export async function GET(request: NextRequest) {
     }
 
     const filter = searchParams.get("filter");
-    if (filter && filter !== "today" && filter !== "week") {
+    if (
+      filter &&
+      filter !== "today" &&
+      filter !== "week" &&
+      filter !== "agenda"
+    ) {
       return errorResponse(
         "VALIDATION_ERROR",
-        "filter must be today or week",
+        "filter must be today, week, or agenda",
         422,
       );
     }
@@ -36,7 +41,7 @@ export async function GET(request: NextRequest) {
       status: status ?? undefined,
       project: searchParams.get("project") ?? undefined,
       tag: searchParams.get("tag") ?? undefined,
-      filter: filter as "today" | "week" | undefined,
+      filter: filter as "today" | "week" | "agenda" | undefined,
       date: searchParams.get("date") ?? undefined,
     });
 

@@ -10,7 +10,7 @@ import type { Project } from "@/lib/schemas/project";
 const navItems = [
   { href: "/tasks", label: "Tasks" },
   { href: "/week", label: "Week" },
-  { href: "/settings", label: "Settings" },
+  { href: "/settings", label: "Work Limits" },
 ] as const;
 
 function isNavActive(pathname: string, href: string): boolean {

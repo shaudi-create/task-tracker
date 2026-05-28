@@ -4,3 +4,7 @@ export function revalidateTaskViews() {
   revalidatePath("/tasks");
   revalidatePath("/week");
 }
+
+export function revalidateSettingsView() {
+  revalidatePath("/settings");
+}

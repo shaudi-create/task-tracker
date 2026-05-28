@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, zodErrorResponse } from "@/lib/api/errors";
 import { getSettings, updateSettings } from "@/lib/db/settings";
-import { revalidateTaskViews } from "@/lib/revalidate";
+import { revalidateSettingsView, revalidateTaskViews } from "@/lib/revalidate";
 import { UpdateSettingsBody } from "@/lib/schemas/settings";
 
 export const runtime = "nodejs";
@@ -30,6 +30,7 @@ export async function PUT(request: NextRequest) {
 
     const settings = await updateSettings(parsed.data);
     revalidateTaskViews();
+    revalidateSettingsView();
     return NextResponse.json(settings);
   } catch (err) {
     const message =

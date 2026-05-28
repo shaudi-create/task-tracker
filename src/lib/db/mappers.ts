@@ -1,6 +1,9 @@
 import type { Task } from "@/lib/schemas/task";
 import type { Project } from "@/lib/schemas/project";
-import type { Settings } from "@/lib/schemas/settings";
+import {
+  parseDayCeilingsJson,
+  type Settings,
+} from "@/lib/schemas/settings";
 
 function toIso(value: unknown): string {
   if (value instanceof Date) return value.toISOString();
@@ -85,8 +88,10 @@ export function mapProjectRow(
 }
 
 export function mapSettingsRow(row: Record<string, unknown>): Settings {
+  const dailyCeiling = Number(row.daily_ceiling_minutes);
   return {
-    daily_ceiling_minutes: Number(row.daily_ceiling_minutes),
+    daily_ceiling_minutes: dailyCeiling,
+    day_ceilings: parseDayCeilingsJson(row.day_ceilings, dailyCeiling),
     github_repo:
       row.github_repo === null || row.github_repo === undefined
         ? null

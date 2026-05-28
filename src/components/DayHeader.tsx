@@ -58,10 +58,13 @@ export function DayHeader({ workload, loading }: DayHeaderProps) {
           className="mt-2 border-l-4 border-amber-400 bg-amber-50 px-3 py-2 text-xs text-amber-900"
           role="status"
         >
-          {formatWorkloadWarning({
-            totalMinutes: workload.total_minutes,
-            ceilingMinutes: workload.ceiling_minutes,
-          })}
+          {formatWorkloadWarning(
+            {
+              totalMinutes: workload.total_minutes,
+              ceilingMinutes: workload.ceiling_minutes,
+            },
+            { today: true },
+          )}
         </p>
       )}
     </div>
